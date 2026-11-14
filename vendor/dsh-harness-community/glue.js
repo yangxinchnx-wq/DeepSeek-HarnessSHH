@@ -36,6 +36,10 @@ var clsx = function () {
 
 /*__BLOCK_HUB__*/
 
+var CSS_EXTRA = [
+  String.raw`[data-dsh-harness-tabs-anchor]{flex:1 1 auto;min-width:0;display:flex;overflow:hidden;height:100%}`,
+  String.raw`.wSkVaW_titleRow{display:flex!important;align-items:center!important}`
+].join(String.fromCharCode(10));
 var LUMINEX_CSS = __LUMINEX_CSS__;
 var luminexRuntime = {
   /*__BLOCK_THEME_RUNTIME__*/
@@ -220,12 +224,13 @@ function resolveWorkspaceHelpers(ctx) {
 // ---------------------------------------------------------------------------
 var THEME_STORAGE_KEY = "dsh_harness_theme_id";
 function mountLuminexTheme() {
+  globalThis.__dshHarnessCornerWidget = true;
   if (typeof document === "undefined" || !document.body) return;
   var styleId = "dsh-harness-luminex-css";
   if (!document.getElementById(styleId)) {
     var style = document.createElement("style");
     style.id = styleId;
-    style.textContent = LUMINEX_CSS;
+    style.textContent = LUMINEX_CSS + CSS_EXTRA;
     document.head.appendChild(style);
   }
   var saved = "preset-1";
@@ -407,16 +412,13 @@ function mountTabsBar(ctx) {
     },
     findAnchor: function () {
       var cls = ConversationRoot_module_css_default;
-      var headerEl = document.querySelector("." + cls.header.split(" ")[0] + ", ." + cls.titleRow.split(" ")[0]);
-      if (!headerEl) return null;
-      var parent = headerEl.parentElement;
-      if (!parent) return null;
-      // Directly above the header row inside its parent container.
-      var existing = parent.querySelector('[data-dsh-harness-portal="tabs-bar"]');
+      var titleRow = document.querySelector('.' + cls.titleRow.split(' ')[0]);
+      if (!titleRow) return null;
+      var existing = titleRow.querySelector(':scope > [data-dsh-harness-portal="tabs-bar"]');
       if (existing) return existing.parentElement;
-      var wrapper = document.createElement("div");
-      wrapper.setAttribute("data-dsh-harness-tabs-anchor", "1");
-      parent.insertBefore(wrapper, headerEl);
+      var wrapper = document.createElement('div');
+      wrapper.setAttribute('data-dsh-harness-tabs-anchor', '1');
+      titleRow.insertBefore(wrapper, titleRow.firstChild);
       return wrapper;
     },
   });

@@ -2414,7 +2414,7 @@ export function buildLuminexCanvasRuntimeCode(): string {
 				return;
 			}
 
-			let savedMode = "light";
+			let savedMode = "dark";
 			try {
 				const raw = localStorage.getItem("dsh_preset1_submode_v2");
 				if (raw === "light" || raw === "dark") savedMode = raw;
