@@ -2663,9 +2663,10 @@ export function buildLuminexCanvasRuntimeCode(): string {
 				}
 			};
 
-			ensureCornerWidget();
+			if (globalThis.__dshHarnessCornerWidget === true) ensureCornerWidget();
 			if (!globalThis.__dshCornerToggleObserver && typeof MutationObserver !== "undefined") {
 				const obs = new MutationObserver(() => {
+					if (globalThis.__dshHarnessCornerWidget !== true) return;
 					if (document.body.getAttribute("data-dsh-theme-id") === "${LUMINEX_PRESET_ID}") {
 						if (!document.getElementById("dsh-corner-pull-toggle")) {
 							ensureCornerWidget();

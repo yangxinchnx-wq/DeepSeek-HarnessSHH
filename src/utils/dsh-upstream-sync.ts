@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
+import { buildLuminexCanvasRuntimeCode, buildLuminexPresetCss } from './luminex-theme.ts';
 
 const WEB_SEARCH_LOCALES: Record<string, { meta: { title: string; description?: string } }> = {
   'de.json': {
@@ -459,15 +461,16 @@ const FETCH_PROVIDER_DESCRIPTION = {
   // 1b. Session-stats pills: always show the full reading on hover.
   // Upstream gates the pill tooltip behind onlyWhenClipped (ellipsis), which
   // hides the hover reading entirely when the label fits — restore it.
+  // Handles both the formatted (rc.1) and minified (rc.3+) bundle shapes.
   // =========================================================================
   const chatClientPath = path.join(nmScopeDir, 'dsh-client-ui-chat/lib/client.js');
   if (fs.existsSync(chatClientPath)) {
     let code = fs.readFileSync(chatClientPath, 'utf8');
     if (code.includes('onlyWhenClipped: true')) {
-      code = code.replace(
-        'onlyWhenClipped: true',
-        'onlyWhenClipped: false',
-      );
+      code = code.replace('onlyWhenClipped: true', 'onlyWhenClipped: false');
+      fs.writeFileSync(chatClientPath, code, 'utf8');
+    } else if (code.includes('onlyWhenClipped:true') && !code.includes('onlyWhenClipped:false')) {
+      code = code.replace('onlyWhenClipped:true', 'onlyWhenClipped:false');
       fs.writeFileSync(chatClientPath, code, 'utf8');
     }
   }
@@ -1532,6 +1535,183 @@ function maxStatePayloadBytes(maxFrameBytes) {
         fs.writeFileSync(dshPkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
       }
     }
+  }
+
+  // =========================================================================
+  // 13. dsh-harness-community official client plugin.
+  // Replaces the legacy client string-patch layer: the ported UI blocks are
+  // extracted from src (single source of truth), CSS-module class maps are
+  // resolved against the installed bundles, and the Luminex CSS/runtime are
+  // generated from luminex-theme.ts. Version-proof: no upstream code anchors.
+  // =========================================================================
+  buildHarnessClientPlugin(rootDir, nmScopeDir);
+}
+
+function extractTemplateBlock(source: string, startLine: number, hardEndLine: number): string {
+  const lines = source.split('\n');
+  let end = hardEndLine;
+  for (let i = Math.min(hardEndLine, lines.length); i >= startLine; i--) {
+    if (lines[i - 1].trimEnd().endsWith('`;')) {
+      end = i;
+      break;
+    }
+  }
+  const first = lines[startLine - 1] ?? '';
+  const backtickAt = first.indexOf('`');
+  if (backtickAt === -1) throw new Error(`template block start line ${startLine} has no backtick`);
+  const head = first.slice(backtickAt + 1);
+  const tail = (lines[end - 1] ?? '').replace(/`;\s*$/, '');
+  const body = [head, ...lines.slice(startLine, end - 1), tail].join('\n');
+  return body;
+}
+
+function evalTemplate(inner: string, scope: Record<string, string> = {}): string {
+  const keys = Object.keys(scope);
+  // eslint-disable-next-line no-new-func -- build-time template materialization
+  const fn = new Function(...keys, 'return `' + inner + '`');
+  return fn(...keys.map((k) => scope[k]));
+}
+
+function deriveCssClassMap(bundleCode: string, distinctiveKey: string, keys: string[], legacyHash: string): Record<string, string> {
+  const hashMatch = bundleCode.match(new RegExp(`\\.([A-Za-z][\\w]{0,7})_${distinctiveKey}(?![\\w-])`));
+  if (!hashMatch) {
+    console.warn(`[dsh-upstream-sync] distinctive key "${distinctiveKey}" not found; falling back to legacy hash "${legacyHash}"`);
+    return Object.fromEntries(keys.map((key) => [key, legacyHash + '_' + key]));
+  }
+  const hash = hashMatch[1];
+  const map: Record<string, string> = {};
+  for (const key of keys) {
+    const present = new RegExp(`\\.${hash}_${key}(?![\\w-])`).test(bundleCode);
+    map[key] = hash + '_' + key;
+    if (!present) console.warn(`[dsh-upstream-sync] class "${hash}_${key}" not found in bundle CSS (key: ${key})`);
+  }
+  return map;
+}
+
+function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
+  if (process.env.DSH_DISABLE_HARNESS_PLUGIN === '1') return;
+  const vendorDir = path.join(rootDir, 'vendor/dsh-harness-community');
+  const gluePath = path.join(vendorDir, 'glue.js');
+  if (!fs.existsSync(gluePath)) return;
+
+  const patchesSource = fs.readFileSync(path.join(rootDir, 'src/utils/dsh-client-patches.ts'), 'utf8');
+  const sshSource = fs.readFileSync(path.join(rootDir, 'ssh/client-ui.ts'), 'utf8');
+
+  const sshBlock = evalTemplate(
+    extractTemplateBlock(sshSource, 56, sshSource.split('\n').length),
+  );
+  const tabsBlock = evalTemplate(
+    extractTemplateBlock(patchesSource, 35, 585),
+    { SSH_CLIENT_RUNTIME_COMPONENTS: sshBlock },
+  );
+  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 1983, 2637));
+  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3848, 4578));
+
+  // Custom tabs CSS (BROWSER_TAB_CSS_APPEND + SSH_CLIENT_CSS_APPEND) — quoted
+  // string-concat consts, evaluated as JS expressions.
+  const evalJsExpression = (expr: string): string =>
+    // eslint-disable-next-line no-new-func -- build-time const materialization
+    new Function('return (' + expr + ');')() as string;
+  const sshCssSourceLines = sshSource.split('\n').slice(0, 55);
+  const sshCssExpr = sshCssSourceLines
+    .join('\n')
+    .replace(/^export const SSH_CLIENT_CSS_APPEND\s*=/, '')
+    .trimEnd()
+    .replace(/;\s*$/, '');
+  const sshCss = evalJsExpression(sshCssExpr);
+  const browserCssExpr = patchesSource
+    .split('\n')
+    .slice(10, 33)
+    .join('\n')
+    .replace(/^const BROWSER_TAB_CSS_APPEND\s*=/, '')
+    .trimEnd()
+    .replace(/\+\s*SSH_CLIENT_CSS_APPEND;\s*$/, '');
+  const browserTabCss = evalJsExpression(browserCssExpr);
+
+  const workspaceBundle = safeRead(path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'));
+  const conversationBundle = safeRead(path.join(nmScopeDir, 'dsh-client-ui-conversation/lib/client.js'));
+  const scheduleBundle = safeRead(path.join(nmScopeDir, 'dsh-client-ui-schedule/lib/client.js'));
+
+  const rowsKeys = ['projectRow', 'sessionRow', 'selected', 'slot', 'folder', 'chevron', 'arrowOpen', 'projectText', 'title', 'rowActions', 'iconButton', 'rowResting', 'time', 'timestamp'];
+  const wbKeys = ['groupSection'];
+  // browserTab* keys are the harness's own custom classes (BROWSER_TAB_CSS_APPEND),
+  // always hardcoded to the stable wSkVaW_ prefix; conversation-module keys are derived.
+  const convDerivedKeys = ['header', 'headerBlank', 'headerLeading', 'headerSessionless', 'titleRow'];
+  const convCustomKeys = ['browserTab', 'browserTabActive', 'browserTabAdd', 'browserTabClose', 'browserTabDragging', 'browserTabRenameInput', 'browserTabTitle', 'browserTabWs', 'browserTabsBar'];
+  const tmKeys = ['listPane', 'page', 'pageContent', 'pageHeading', 'pageScroll'];
+
+  const legacyHash = 'wSkVaW';
+  const classMaps = [
+    workspaceBundle ? `var Rows_module_css_default = ${JSON.stringify(deriveCssClassMap(workspaceBundle, 'projectRow', rowsKeys, legacyHash))};` : '',
+    workspaceBundle ? `var WorkspaceBrowser_module_css_default = ${JSON.stringify(deriveCssClassMap(workspaceBundle, 'groupSection', wbKeys, legacyHash))};` : '',
+    conversationBundle
+      ? `var ConversationRoot_module_css_default = ${JSON.stringify({
+          ...deriveCssClassMap(conversationBundle, 'titleRow', convDerivedKeys, legacyHash),
+          ...Object.fromEntries(convCustomKeys.map((k) => [k, legacyHash + '_' + k])),
+        })};`
+      : '',
+    scheduleBundle ? `var TaskManagerPage_module_css_default = ${JSON.stringify(deriveCssClassMap(scheduleBundle, 'pageHeading', tmKeys, 'dt'))};` : '',
+  ].join('\n');
+
+  const glue = fs.readFileSync(gluePath, 'utf8');
+  const assembled = glue
+    .replaceAll('/*__CLASS_MAPS__*/', () => classMaps)
+    .replaceAll('/*__BLOCK_SSH_RUNTIME__*/', () => '')
+    .replaceAll('/*__BLOCK_TABS__*/', () => tabsBlock)
+    .replaceAll('/*__BLOCK_GROUPS__*/', () => groupsBlock)
+    .replaceAll('/*__BLOCK_HUB__*/', () => hubBlock)
+    .replaceAll('/*__BLOCK_THEME_RUNTIME__*/', () => buildLuminexCanvasRuntimeCode())
+    .replaceAll('__LUMINEX_CSS__', () => JSON.stringify(buildLuminexPresetCss() + '\n' + browserTabCss));
+
+  // Syntax gate: fail loudly at boot instead of shipping a broken bundle.
+  void new vm.Script(assembled, { filename: 'dsh-harness-community.client.js' });
+
+  const targetDir = path.join(rootDir, 'node_modules/dsh-harness-community');
+  if (fs.existsSync(targetDir)) {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+  fs.cpSync(vendorDir, targetDir, { recursive: true, force: true });
+  fs.writeFileSync(path.join(targetDir, 'client.js'), assembled, 'utf8');
+
+  const webAppDir = path.join(nmScopeDir, 'dsh-web-app');
+  const webAppPkgPath = path.join(webAppDir, 'package.json');
+  const webAppPresetsDir = path.join(webAppDir, 'presets');
+  const patchSrc = path.join(vendorDir, 'cordis.patch.yml');
+  if (fs.existsSync(webAppPresetsDir) && fs.existsSync(patchSrc)) {
+    fs.copyFileSync(patchSrc, path.join(webAppPresetsDir, 'harness.patch.yml'));
+  }
+  if (fs.existsSync(webAppPkgPath)) {
+    const pkg = JSON.parse(fs.readFileSync(webAppPkgPath, 'utf8'));
+    let changed = false;
+    const patches: string[] = pkg.dsh?.bundle?.patch ?? [];
+    if (!patches.includes('./presets/harness.patch.yml')) {
+      pkg.dsh = {
+        ...pkg.dsh,
+        bundle: {
+          ...pkg.dsh?.bundle,
+          patch: [...patches, './presets/harness.patch.yml'],
+        },
+      };
+      changed = true;
+    }
+    if (pkg.dependencies?.['dsh-harness-community'] !== '1.0.0') {
+      pkg.dependencies = {
+        ...pkg.dependencies,
+        'dsh-harness-community': '1.0.0',
+      };
+      changed = true;
+    }
+    if (changed) {
+      fs.writeFileSync(webAppPkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+    }
+  }
+}
+
+function safeRead(filePath: string): string | null {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (_e) {
+    return null;
   }
 }
 

@@ -1,0 +1,13 @@
+# dsh-harness-community bundle patch
+#
+# 客户端定制统一走本插件(官方 client module):
+#   - 群组侧栏区 + 群组协同面板(main slot)
+#   - 顶部浏览器式标签栏
+#   - Luminex 主题 + 全局 tooltip 卡片
+# 服务端 API(/api/superagent-groups、/api/mcp-settings、SSH)由外层 Express 提供。
+
+- insert:
+    - id: dsh-harness-community
+      name: dsh-harness-community
+      config:
+        enabled: true
