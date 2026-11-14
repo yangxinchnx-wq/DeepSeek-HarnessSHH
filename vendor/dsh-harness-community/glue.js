@@ -36,6 +36,8 @@ var clsx = function () {
 
 /*__BLOCK_HUB__*/
 
+/*__BLOCK_GROUP_BAR__*/
+
 var CSS_EXTRA = [
   String.raw`[data-dsh-harness-tabs-anchor]{flex:1 1 auto;min-width:0;display:flex;overflow:hidden;height:100%}`,
   String.raw`.wSkVaW_titleRow{display:flex!important;align-items:center!important}`
@@ -169,12 +171,44 @@ globalThis.__dshCreateNewTab = function (_opt, opts) {
   tabStore.optimisticTabs.set(optKey, {
     roomId: opts && opts.roomId,
     title: opts && opts.title,
+    knownIds: new Set(helpers.list.ids || []),
   });
   if (opts && opts.title) tabStore.customTitles.set(optKey, opts.title);
-  if (!tabStore.order.includes(optKey)) tabStore.order.push(optKey);
   if (opts && opts.roomId) tabStore.noTabsHomeMode = false;
   tabStore.emit(true);
-  var created = helpers.startSession(wsId, { draft: true });
+  // Mirror the rc.1 flow: create a REAL session (not a draft) so it appears in
+  // the sessions list; then bind the room and open it once the id surfaces.
+  var uw = svc.uiWorkspace || {};
+  var prevIds = new Set(helpers.list.ids || []);
+  var prevSel = "";
+  try { prevSel = uw.selection.getSnapshot().sessionId || ""; } catch (_e) {}
+  var created = null;
+  try {
+    created = uw.startSession(wsId, {});
+  } catch (e) {
+    harnessLog("createNewTab.startSession", e);
+  }
+  var attempts = 0;
+  var timer = setInterval(function () {
+    attempts += 1;
+    try {
+      var snap = uw.sessions.list.getSnapshot();
+      var ids = snap.ids || [];
+      var newId = ids.find(function (id) { return !prevIds.has(id); }) || null;
+      var selId = "";
+      try { selId = uw.selection.getSnapshot().sessionId || ""; } catch (_e) {}
+      if (!newId && selId && selId !== prevSel) newId = selId;
+      if (newId) {
+        clearInterval(timer);
+        tabStore.resolveOptimisticTab(newId, optKey);
+        if (opts && opts.title) tabStore.setCustomTitle(newId, opts.title);
+        globalThis.__dshSelectMainPanel(null);
+        try { uw.openSession(newId); } catch (_e) {}
+      } else if (attempts > 50) {
+        clearInterval(timer);
+      }
+    } catch (_e) {}
+  }, 120);
   return created;
 };
 
@@ -357,33 +391,37 @@ function mountSidebarGroups(ctx) {
 function mountTabsBar(ctx) {
   if (!globalThis.__dshBrowserTabsStore) getDshBrowserTabsStore();
   var helpers = resolveWorkspaceHelpers(ctx);
-  var helpers2 = resolveWorkspaceHelpers(ctx);
-  var sessStore = helpers2.sessStore;
-  var wsStore = helpers2.wsStore;
-  var sessionsStoreSubscribe = function (cb) {
-    try {
-      if (sessStore && typeof sessStore.subscribe === 'function') return sessStore.subscribe(cb);
-    } catch (_e) {}
-    return function () {};
+  var sessStoreRef = function () {
+    var uw = svc.uiWorkspace || {};
+    return (uw.sessions && uw.sessions.list) || null;
   };
-  var wsSubscribe = function (cb) {
-    try {
-      if (wsStore && typeof wsStore.subscribe === 'function') return wsStore.subscribe(cb);
-    } catch (_e) {}
-    return function () {};
+  var wsStoreRef = function () {
+    var uw = svc.uiWorkspace || {};
+    return (uw.workspaces && uw.workspaces.list) || null;
+  };
+  var storeSubscribe = function (ref) {
+    return function (cb) {
+      try {
+        var st = ref();
+        if (st && typeof st.subscribe === "function") return st.subscribe(cb);
+      } catch (_e) {}
+      return function () {};
+    };
   };
   var useSessions = serviceHook(function () {
     try {
-      var snap = sessStore && sessStore.getSnapshot();
+      var st = sessStoreRef();
+      var snap = st && st.getSnapshot();
       return snap || { byId: {}, ids: [] };
     } catch (_e) { return { byId: {}, ids: [] }; }
-  }, sessionsStoreSubscribe);
+  }, storeSubscribe(sessStoreRef));
   var useWorkspaces = serviceHook(function () {
     try {
-      var snap = wsStore && wsStore.getSnapshot();
+      var st = wsStoreRef();
+      var snap = st && st.getSnapshot();
       return snap || { items: [], archivedSessionIds: [] };
     } catch (_e) { return { items: [], archivedSessionIds: [] }; }
-  }, wsSubscribe);
+  }, storeSubscribe(wsStoreRef));
   portalMount({
     name: "tabs-bar",
     hostTag: "div",
@@ -442,9 +480,113 @@ function registerGroupHubPanel(ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Conversation insets: group room bar (above the scroll body) + SSH telemetry
+// drawer (below it) — the rc.1 mount points inside ConversationContent.
+// ---------------------------------------------------------------------------
+function useActiveSessionId() {
+  var uw = svc.uiWorkspace || {};
+  var sel = uw.selection;
+  var subscribe = function (cb) {
+    try { if (sel && typeof sel.subscribe === "function") return sel.subscribe(cb); } catch (_e) {}
+    return function () {};
+  };
+  var getSnapshot = function () {
+    try {
+      var s = sel && sel.getSnapshot();
+      return (s && s.sessionId) || "";
+    } catch (_e) { return ""; }
+  };
+  return (0, react.useSyncExternalStore)(subscribe, getSnapshot, getSnapshot);
+}
+
+function GroupRoomBarHost() {
+  var sessionId = useActiveSessionId();
+  var gStore = globalThis.__dshGroupHubStore;
+  var gRev = react.useSyncExternalStore(
+    function (cb) { try { return gStore.subscribe(cb); } catch (_e) { return function () {}; } },
+    function () { try { return gStore.getSnapshot(); } catch (_e) { return 0; } }
+  );
+  var tabStore = globalThis.__dshBrowserTabsStore;
+  var tRev = react.useSyncExternalStore(
+    function (cb) { try { return tabStore.subscribe(cb); } catch (_e) { return function () {}; } },
+    function () { try { return tabStore.getSnapshot(); } catch (_e) { return 0; } }
+  );
+  void gRev;
+  void tRev;
+  return react.createElement(DshGroupRoomNativeBar, { sessionId: sessionId || void 0 });
+}
+
+function SshDrawerHost() {
+  var sessionId = useActiveSessionId();
+  return react.createElement(SshServerTelemetryDrawer, { sessionId: sessionId || void 0 });
+}
+
+function mountConversationInsets(ctx) {
+  // Overlay strategy: the hosts live on <body> (never inside the React tree —
+  // foreign DOM nodes in React-managed containers crash reconciliation on
+  // session switches). A rAF loop pins their geometry to the conversation
+  // scroll body, and scroll-body padding reserves the bar's layout space.
+  var barHost = document.createElement('div');
+  barHost.setAttribute('data-dsh-harness-portal', 'group-room-bar');
+  var drawerHost = document.createElement('div');
+  drawerHost.setAttribute('data-dsh-harness-portal', 'ssh-drawer');
+  var started = false;
+
+  function ensureStarted() {
+    if (started || typeof document === 'undefined' || !document.body) return;
+    started = true;
+    document.body.appendChild(barHost);
+    document.body.appendChild(drawerHost);
+    var barRoot = react_dom.createRoot(barHost);
+    var drawerRoot = react_dom.createRoot(drawerHost);
+    var renderHosts = function () {
+      barRoot.render(
+        react.createElement(HarnessErrorBoundary, { name: 'group-room-bar' }, react.createElement(GroupRoomBarHost)),
+      );
+      drawerRoot.render(
+        react.createElement(HarnessErrorBoundary, { name: 'ssh-drawer' }, react.createElement(SshDrawerHost)),
+      );
+    };
+    renderHosts();
+    var syncLoop = function () {
+      try {
+        var sb = document.querySelector('[data-conversation-scroll], [class*="wSkVaW_scrollBody"]');
+        if (sb) {
+          var r = sb.getBoundingClientRect();
+          barHost.style.display = 'block';
+          barHost.style.position = 'fixed';
+          barHost.style.left = Math.round(r.left) + 'px';
+          barHost.style.width = Math.round(r.width) + 'px';
+          barHost.style.top = Math.round(r.top) + 'px';
+          barHost.style.zIndex = '35';
+          var barH = barHost.offsetHeight;
+          if (barH > 0 && sb.style.paddingTop !== barH + 'px') sb.style.paddingTop = barH + 'px';
+          drawerHost.style.display = 'block';
+          drawerHost.style.position = 'fixed';
+          drawerHost.style.zIndex = '60';
+        } else {
+          barHost.style.display = 'none';
+          drawerHost.style.display = 'none';
+        }
+      } catch (_e) {}
+      requestAnimationFrame(syncLoop);
+    };
+    requestAnimationFrame(syncLoop);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureStarted);
+  } else {
+    ensureStarted();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // apply(ctx) — module entry. ctx carries the declared client injects
 // (slots/locale/connection/runtime); runtime services are pulled via
-// ctx.inject exactly like dsh-purge-community does.
+// ctx.inject exactly like dsh-purge-community does. Portals are created
+// directly in apply (never inside ctx.inject callbacks — service registration
+// timing must not gate the UI), and every portal reads services lazily.
 // ---------------------------------------------------------------------------
 var inject = ["slots", "locale"];
 function apply(ctx) {
@@ -463,32 +605,36 @@ function apply(ctx) {
         svc.uiConversation = host.uiConversation;
         svc.layout = host.layout;
         captureServices(ctx);
-        // (Re)mount service-dependent portals once faces are available.
-        if (FLAGS.sidebar !== false) try {
-          mountSidebarGroups(ctx);
-        } catch (e) {
-          harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] sidebar groups:", e);
-        }
-        if (FLAGS.tabs !== false) try {
-          mountTabsBar(ctx);
-        } catch (e) {
-          harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] tabs bar:", e);
-        }
       },
     );
   } catch (e) {
-    harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] service inject failed:", e);
+    harnessLog("service-inject", e);
   }
 
   if (FLAGS.theme !== false) try {
     mountLuminexTheme();
   } catch (e) {
-    harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] theme:", e);
+    harnessLog("theme", e);
   }
   if (FLAGS.hub !== false) try {
     registerGroupHubPanel(ctx);
   } catch (e) {
-    harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] hub panel:", e);
+    harnessLog("hub-panel", e);
+  }
+  if (FLAGS.sidebar !== false) try {
+    mountSidebarGroups(ctx);
+  } catch (e) {
+    harnessLog("sidebar-groups", e);
+  }
+  if (FLAGS.tabs !== false) try {
+    mountTabsBar(ctx);
+  } catch (e) {
+    harnessLog("tabs-bar", e);
+  }
+  if (FLAGS.insets === true) try {
+    mountConversationInsets(ctx);
+  } catch (e) {
+    harnessLog("conversation-insets", e);
   }
 }
 exports.apply = apply;

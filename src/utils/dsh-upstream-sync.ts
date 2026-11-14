@@ -1606,6 +1606,7 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
   );
   const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 1983, 2637));
   const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3848, 4578));
+  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1075, 1585));
 
   // Custom tabs CSS (BROWSER_TAB_CSS_APPEND + SSH_CLIENT_CSS_APPEND) — quoted
   // string-concat consts, evaluated as JS expressions.
@@ -1660,6 +1661,7 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
     .replaceAll('/*__BLOCK_TABS__*/', () => tabsBlock)
     .replaceAll('/*__BLOCK_GROUPS__*/', () => groupsBlock)
     .replaceAll('/*__BLOCK_HUB__*/', () => hubBlock)
+    .replaceAll('/*__BLOCK_GROUP_BAR__*/', () => groupBarBlock)
     .replaceAll('/*__BLOCK_THEME_RUNTIME__*/', () => buildLuminexCanvasRuntimeCode())
     .replaceAll('__LUMINEX_CSS__', () => JSON.stringify(buildLuminexPresetCss() + '\n' + browserTabCss));
 
