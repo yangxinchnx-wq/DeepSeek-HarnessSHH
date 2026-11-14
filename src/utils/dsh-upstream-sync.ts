@@ -476,6 +476,68 @@ const FETCH_PROVIDER_DESCRIPTION = {
   }
 
   // =========================================================================
+  // 1c. Luminex presets in the stock theme picker (settings → appearance):
+  // register preset-1/2/3 in BUILTIN_THEMES, append appearance cubes, and add
+  // the zh/en labels — so the rc.1 theme choices are selectable again.
+  // =========================================================================
+  const themeClientPath = path.join(nmScopeDir, 'dsh-client-ui-theme/lib/client.js');
+  if (fs.existsSync(themeClientPath)) {
+    let code = fs.readFileSync(themeClientPath, 'utf8');
+    let changed = false;
+    if (!code.includes('id:`preset-1`')) {
+      const builtinAnchor =
+        'Object.freeze({id:`dark`,colorScheme:`dark`,tokens:Object.freeze({})})]);';
+      if (code.includes(builtinAnchor)) {
+        code = code.replace(
+          builtinAnchor,
+          'Object.freeze({id:`dark`,colorScheme:`dark`,tokens:Object.freeze({})}),' +
+            'Object.freeze({id:`preset-1`,colorScheme:`dark`,tokens:Object.freeze({})}),' +
+            'Object.freeze({id:`preset-2`,colorScheme:`light`,tokens:Object.freeze({})}),' +
+            'Object.freeze({id:`preset-3`,colorScheme:`light`,tokens:Object.freeze({})})]);',
+        );
+        changed = true;
+      }
+      const cubesAnchor =
+        '{id:`system`,labelKey:`appearance.system`,Icon:_deepseek_ai_dsh_client_ui_primitives.IconFollowsystemOutlineMedium}];';
+      if (code.includes(cubesAnchor)) {
+        code = code.replace(
+          cubesAnchor,
+          '{id:`system`,labelKey:`appearance.system`,Icon:_deepseek_ai_dsh_client_ui_primitives.IconFollowsystemOutlineMedium},' +
+            '{id:`preset-1`,labelKey:`appearance.preset1`,Icon:_deepseek_ai_dsh_client_ui_primitives.IconDarkOutlineMedium},' +
+            '{id:`preset-2`,labelKey:`appearance.preset2`,Icon:_deepseek_ai_dsh_client_ui_primitives.IconLightOutlineMedium},' +
+            '{id:`preset-3`,labelKey:`appearance.preset3`,Icon:_deepseek_ai_dsh_client_ui_primitives.IconFollowsystemOutlineMedium}];',
+        );
+        changed = true;
+      }
+      const zhAnchor = '"appearance.system":`跟随系统`,';
+      if (code.includes(zhAnchor)) {
+        code = code.replace(
+          zhAnchor,
+          zhAnchor +
+            '"appearance.preset1":`高级灰`,' +
+            '"appearance.preset2":`极简橙`,' +
+            '"appearance.preset3":`预设 3`,',
+        );
+        changed = true;
+      }
+      const enAnchor = '"appearance.system":`System`,';
+      if (code.includes(enAnchor)) {
+        code = code.replace(
+          enAnchor,
+          enAnchor +
+            '"appearance.preset1":`Luminex Gray`,' +
+            '"appearance.preset2":`Luminex Orange`,' +
+            '"appearance.preset3":`Preset 3`,',
+        );
+        changed = true;
+      }
+      if (changed) {
+        fs.writeFileSync(themeClientPath, code, 'utf8');
+      }
+    }
+  }
+
+  // =========================================================================
   // 2. SDK Team Mode (#7773)
   // =========================================================================
   const agentTeamIndex = path.join(nmScopeDir, 'dsh-experimental-agent-team/lib/index.js');

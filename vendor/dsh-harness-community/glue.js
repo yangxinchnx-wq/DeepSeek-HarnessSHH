@@ -269,9 +269,14 @@ function mountLuminexTheme() {
   }
   var saved = "preset-1";
   try {
-    saved = window.localStorage.getItem(THEME_STORAGE_KEY) || "preset-1";
+    var choiceRaw = window.localStorage.getItem("dsh_harness_theme_choice");
+    if (choiceRaw) {
+      var choice = JSON.parse(choiceRaw);
+      if (choice && choice.mode === "stock") saved = "";
+      else if (choice && choice.id) saved = choice.id;
+    }
   } catch (_e) {}
-  try {
+  if (saved) try {
     luminexRuntime.syncDshLuminexBackground(saved);
   } catch (e) {
     harnessLog("[dsh-harness] kind", e); console.error("[dsh-harness] luminex runtime:", e);
@@ -582,6 +587,63 @@ function mountConversationInsets(ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Stock theme bridge: rc.3's theme picker applies colorScheme/tokens but never
+// publishes body[data-dsh-theme-id], which all Luminex CSS is keyed on.
+// Subscribe to theme/change and publish the attribute for our presets.
+// ---------------------------------------------------------------------------
+function syncThemeAttrs(snapshot) {
+  var explicit = !!snapshot;
+  var pref = "";
+  try {
+    if (snapshot && snapshot.preference) pref = snapshot.preference;
+    else if (svc.theme && typeof svc.theme.getTheme === "function") {
+      pref = svc.theme.getTheme().preference || "";
+    }
+  } catch (_e) {}
+  var isPreset = pref === "preset-1" || pref === "preset-2" || pref === "preset-3";
+  if (explicit) {
+    // Only an actual user pick in the settings records the choice.
+    try {
+      if (isPreset) {
+        window.localStorage.setItem("dsh_harness_theme_choice", JSON.stringify({ mode: "preset", id: pref }));
+      } else if (pref) {
+        window.localStorage.setItem("dsh_harness_theme_choice", JSON.stringify({ mode: "stock", id: pref }));
+      }
+    } catch (_e) {}
+  }
+  if (!explicit) {
+    // Boot/inject-time sync: honor the recorded choice, default Luminex.
+    var mode = "";
+    try {
+      var raw = window.localStorage.getItem("dsh_harness_theme_choice");
+      if (raw) mode = (JSON.parse(raw) || {}).mode || "";
+    } catch (_e) {}
+    if (mode === "stock") {
+      if (document.body) {
+        document.body.removeAttribute("data-dsh-theme-id");
+        document.body.removeAttribute("data-dsh-preset1-mode");
+      }
+      return;
+    }
+    pref = mode === "preset" ? "" : "preset-1"; // empty → runtime re-applies recorded id via attrs below
+    if (mode === "preset") {
+      try {
+        var rec = JSON.parse(window.localStorage.getItem("dsh_harness_theme_choice") || "{}");
+        pref = rec.id || "preset-1";
+      } catch (_e) { pref = "preset-1"; }
+    }
+  }
+  if ((isPreset || !explicit) && document.body) {
+    try {
+      luminexRuntime.syncDshLuminexBackground(pref || "preset-1");
+    } catch (_e) {}
+  } else if (pref && document.body) {
+    document.body.removeAttribute("data-dsh-theme-id");
+    document.body.removeAttribute("data-dsh-preset1-mode");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // apply(ctx) — module entry. ctx carries the declared client injects
 // (slots/locale/connection/runtime); runtime services are pulled via
 // ctx.inject exactly like dsh-purge-community does. Portals are created
@@ -595,6 +657,22 @@ function apply(ctx) {
     svc.locale = ctx.locale;
   } catch (_e) {}
   captureServices(ctx);
+
+  try {
+    ctx.inject(["theme"], function (host) {
+      svc.theme = host.theme;
+      syncThemeAttrs(null);
+    });
+  } catch (e) {
+    harnessLog("theme-inject", e);
+  }
+  try {
+    ctx.on("theme/change", function (snapshot) {
+      syncThemeAttrs(snapshot);
+    });
+  } catch (e) {
+    harnessLog("theme-change-subscribe", e);
+  }
 
   try {
     ctx.inject(
