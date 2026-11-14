@@ -1,0 +1,442 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { applyDshUpstreamSync } from './dsh-upstream-sync.ts';
+import { applyDshClientPatches } from './dsh-client-patches.ts';
+
+const rootDir = process.cwd();
+const nmScopeDir = path.join(rootDir, 'node_modules/@deepseek-ai');
+
+applyDshUpstreamSync(rootDir);
+applyDshClientPatches(rootDir);
+
+test('1. Web Search & Fetch Settings Split (#7565): defaults searchProvider to deepseek-search-api and exposes listProviders + split UI', async () => {
+  const basePatch = fs.readFileSync(path.join(nmScopeDir, 'dsh-base/cordis.patch.yml'), 'utf8');
+  assert.ok(basePatch.includes('searchProvider: deepseek-search-api'));
+
+  const webMod = (await import('@deepseek-ai/dsh-web')) as unknown as {
+    WebRuntime: {
+      Config: (input: Record<string, unknown>) => {
+        searchProvider: { get: () => string };
+        fetchProvider: { get: () => string };
+      };
+      prototype: { listProviders: () => unknown };
+    };
+  };
+  const cfg = webMod.WebRuntime.Config({
+    searchProvider: 'deepseek-search-api',
+    fetchProvider: 'local',
+  });
+  assert.equal(cfg.searchProvider.get(), 'deepseek-search-api');
+  assert.equal(cfg.fetchProvider.get(), 'local');
+  assert.equal(typeof webMod.WebRuntime.prototype.listProviders, 'function');
+
+  const uiWebSearchCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-settings-web-search/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(uiWebSearchCode.includes('Web search provider'));
+  assert.ok(uiWebSearchCode.includes('Web fetch provider'));
+  assert.ok(uiWebSearchCode.includes('searchProvider'));
+  assert.ok(uiWebSearchCode.includes('fetchProvider'));
+  assert.ok(uiWebSearchCode.includes('DeepSeek Search API'));
+  assert.ok(uiWebSearchCode.includes('DeepSeek Fetch API'));
+});
+
+test('2. SDK Team Mode (#7773): adds defaultEnabled config option to TeamService and team-mode.yml example', async () => {
+  const teamMod = (await import('@deepseek-ai/dsh-experimental-agent-team')) as unknown as {
+    TeamService: {
+      Config: (input: Record<string, unknown>) => { defaultEnabled: boolean };
+    };
+  };
+  const parsedDefault = teamMod.TeamService.Config({});
+  assert.equal(parsedDefault.defaultEnabled, false);
+  const parsedTrue = teamMod.TeamService.Config({ defaultEnabled: true });
+  assert.equal(parsedTrue.defaultEnabled, true);
+
+  const examplePath = path.join(nmScopeDir, 'dsh/config/examples/team-mode.yml');
+  assert.equal(fs.existsSync(examplePath), true);
+  assert.ok(fs.readFileSync(examplePath, 'utf8').includes('defaultEnabled: true'));
+});
+
+test('3. MCP Manager Core (#3372): installs @deepseek-ai/dsh-mcp-manager and upgrades @deepseek-ai/dsh-mcp-client with probeServer/status/watch', async () => {
+  const mcpClientMod = (await import('@deepseek-ai/dsh-mcp-client')) as unknown as {
+    probeServer: unknown;
+    connectionStatusOf: unknown;
+    assertTemplateSyntax: unknown;
+  };
+  assert.equal(typeof mcpClientMod.probeServer, 'function');
+  assert.equal(typeof mcpClientMod.connectionStatusOf, 'function');
+  assert.equal(typeof mcpClientMod.assertTemplateSyntax, 'function');
+
+  const mcpManagerPkgPath = path.join(nmScopeDir, 'dsh-mcp-manager/package.json');
+  assert.equal(fs.existsSync(mcpManagerPkgPath), true);
+
+  const mcpManagerIndex = path.join(nmScopeDir, 'dsh-mcp-manager/lib/index.js');
+  assert.equal(fs.existsSync(mcpManagerIndex), true);
+  const mcpManagerCode = fs.readFileSync(mcpManagerIndex, 'utf8');
+  assert.ok(mcpManagerCode.includes('var McpServerManager = _McpServerManager'));
+  assert.ok(mcpManagerCode.includes('async *watch(signal)'));
+  assert.ok(mcpManagerCode.includes('restart('));
+  assert.ok(mcpManagerCode.includes('probeFromClient('));
+
+  const webAppPatch = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-web-app/cordis.patch.yml'),
+    'utf8',
+  );
+  assert.ok(webAppPatch.includes("name: '@deepseek-ai/dsh-mcp-manager'"));
+});
+
+test('4. Desktop Update Channels (#7495) & Windows CLI Short-Path Recovery (#7709): registers DesktopChannelRow/Toast/Source and installed-bin.js', () => {
+  const generalClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-settings-general/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(generalClientCode.includes('DesktopChannelRow'));
+  assert.ok(generalClientCode.includes('DesktopChannelToast'));
+  assert.ok(generalClientCode.includes('DesktopChannelSource'));
+
+  const installedBinPath = path.join(nmScopeDir, 'dsh/lib/installed-bin.js');
+  assert.equal(fs.existsSync(installedBinPath), true);
+  const installedBinCode = fs.readFileSync(installedBinPath, 'utf8');
+  assert.ok(installedBinCode.includes('realpathSync.native'));
+  assert.ok(installedBinCode.includes('pathToFileURL'));
+});
+
+test('5. Cordis & Vendor Dependency Upgrades (0.2.2-rc.1 / #7790): runs @deepseek-ai/dsh@0.2.2-rc.1 with cordis@4.1.0 and schemastery@3.19.0', () => {
+  const dshPkg = JSON.parse(fs.readFileSync(path.join(nmScopeDir, 'dsh/package.json'), 'utf8'));
+  assert.equal(dshPkg.version, '0.2.2-rc.1');
+
+  const cordisPkg = JSON.parse(
+    fs.readFileSync(path.join(nmScopeDir, 'cordis/package.json'), 'utf8'),
+  );
+  assert.equal(cordisPkg.version, '4.1.0');
+
+  const schemasteryPkg = JSON.parse(
+    fs.readFileSync(path.join(nmScopeDir, 'schemastery/package.json'), 'utf8'),
+  );
+  assert.equal(schemasteryPkg.version, '3.19.0');
+});
+
+test('6. [0.2.2-rc.1 Update 1] Web Prompt Retry Deduplication (#7853): deduplicates retried prompt requests via promptReceipts across agent/inbox/spliced and user/message events', () => {
+  const sessionControllerCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-api-session-controller/lib/index.js'),
+    'utf8',
+  );
+  assert.ok(sessionControllerCode.includes('promptReceipts = /* @__PURE__ */ new WeakMap();'));
+  assert.ok(sessionControllerCode.includes('hasPromptRequest(session, requestId)'));
+  assert.ok(
+    sessionControllerCode.includes(
+      'if (this.hasPromptRequest(agent.session, request.requestId)) return { accepted: true };',
+    ),
+  );
+  assert.ok(sessionControllerCode.includes('event.type === "agent/inbox/spliced"'));
+});
+
+test('7. [0.2.2-rc.1 Update 2] Move Open in App into Session Menu (#7569): registers open-in-app.openWith submenu on session & sessionHeader and removes header utility button', () => {
+  const openInAppCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-open-in-app/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(openInAppCode.includes('function registerSessionOpenWith(ctx, controller, t, report)'));
+  assert.ok(openInAppCode.includes('id: "open-in-app.openWith"'));
+  assert.ok(openInAppCode.includes('for (const target of ["session", "sessionHeader"])'));
+  assert.ok(openInAppCode.includes('setFailedSource(icon.src)'));
+  assert.ok(!openInAppCode.includes('name: "conversation.session.header.utilities"'));
+});
+
+test('8. [0.2.2-rc.1 Update 3] Paste Plain Text Shortcut (#7787): registers Shift+Command+V / Ctrl+Shift+V pasteAndMatchStyle handler', () => {
+  const shortcutsCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-shortcuts/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(shortcutsCode.includes('pasteAndMatchStyle'));
+  assert.ok(shortcutsCode.includes('shortcuts: pasteAndMatchStyle'));
+});
+
+test('9. [0.2.2-rc.1 Update 4] Subagent Catalog Names (#7697) & Repeated Fork Title Suffixes (#7472): exports SiblingNameReservations/isAgentName/catalogNames and skips taken fork titles', async () => {
+  const subagentMod = (await import('@deepseek-ai/dsh-subagent')) as unknown as {
+    ROOT_AGENT_NAME: string;
+    isAgentName: (name: string) => boolean;
+    joinAgentPath: (p: string, c: string) => string;
+    agentAddress: (p: string, id: string) => string;
+    parentAgentPath: (p: string) => string;
+    SiblingNameReservations: new () => {
+      tryReserve: (parentId: string, name: string) => (() => void) | undefined;
+    };
+    catalogNames: (entries: Array<{ mode: string; name?: string }>) => Set<string>;
+  };
+
+  assert.equal(subagentMod.ROOT_AGENT_NAME, 'lead');
+  assert.equal(subagentMod.isAgentName('worker-1'), true);
+  assert.equal(subagentMod.isAgentName('lead'), false);
+  assert.equal(subagentMod.joinAgentPath('lead', 'worker-1'), 'lead/worker-1');
+  assert.equal(subagentMod.parentAgentPath('lead/worker-1'), 'lead');
+  assert.equal(subagentMod.agentAddress('lead/worker-1', 'sess-1'), 'lead/worker-1@sess-1');
+
+  const reservations = new subagentMod.SiblingNameReservations();
+  const release = reservations.tryReserve('parent-1', 'explorer');
+  assert.equal(typeof release, 'function');
+  assert.equal(reservations.tryReserve('parent-1', 'explorer'), undefined);
+  release?.();
+  assert.equal(typeof reservations.tryReserve('parent-1', 'explorer'), 'function');
+
+  const names = subagentMod.catalogNames([
+    { mode: 'continuable', name: 'researcher' },
+    { mode: 'external', name: 'verifier' },
+  ]);
+  assert.deepEqual([...names], ['researcher', 'verifier']);
+
+  const subagentClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-subagent/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(subagentClientCode.includes('function entryName(entry)'));
+
+  const sessionClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-api-session-controller/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(sessionClientCode.includes('function increasedForkTitle(title, taken)'));
+  assert.ok(sessionClientCode.includes('while (taken.has(next)) next = incrementedTitle(next);'));
+});
+
+test('10. [0.2.2-rc.1 Update 5] Cordis Inspector Snapshot Budget & Record Overhead (#7425): enforces maxStatePayloadBytes and STATE_RECORD_OVERHEAD_BYTES = 1024', async () => {
+  const inspectorMod = (await import('@deepseek-ai/dsh-experimental-inspector')) as unknown as {
+    STATE_RECORD_OVERHEAD_BYTES: number;
+    MAX_TOPIC_CODE_UNITS: number;
+    maxStatePayloadBytes: (maxFrameBytes: number) => number;
+    resolveInspectorOptions: (opts?: Record<string, unknown>) => unknown;
+  };
+  assert.equal(inspectorMod.STATE_RECORD_OVERHEAD_BYTES, 1024);
+  assert.equal(inspectorMod.MAX_TOPIC_CODE_UNITS, 128);
+  assert.equal(inspectorMod.maxStatePayloadBytes(128 * 1024), 128 * 1024 - 4096 - 1024);
+
+  assert.throws(
+    () =>
+      inspectorMod.resolveInspectorOptions({
+        maxBodyChunkBytes: 3,
+        maxSourceFrameBytes: 5120,
+      }),
+    /inspector: maxSourceFrameBytes cannot carry a Cordis tree snapshot/,
+  );
+});
+
+test('11. ConversationSessionHeader preserves useContextMenu prop and guards invocation in dsh-client-ui-conversation', () => {
+  const convClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-conversation/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(
+    convClientCode.includes(
+      'function ConversationSessionHeader({ sessionId, hideChrome, useSessions, useWorkspaces, useConversationViews, useStore, renderSlot, open, createNewTab, closeTab, renameTab, tWorkspace, selectView, setPinned, t, useEntryPins, useEntryActions, useContextMenu })',
+    ),
+  );
+  assert.ok(
+    convClientCode.includes(
+      'const { getTriggerProps } = typeof useContextMenu === "function" ? useContextMenu() : { getTriggerProps: () => ({}) };',
+    ),
+  );
+});
+
+test('12. [dsh-superagent Integration] Installs dsh-superagent bundle, github-watch, feishu-watch, client UI, and agent presets into dsh-web-app', async () => {
+  const superagentMod = (await import('dsh-superagent')) as unknown as {
+    name: string;
+    apply: (ctx: unknown, config: unknown) => void;
+    Config: (input: Record<string, unknown>) => { stateDir: string };
+  };
+  assert.equal(superagentMod.name, 'dsh-superagent');
+  assert.equal(typeof superagentMod.apply, 'function');
+  const validated = superagentMod.Config({});
+  assert.ok(typeof validated.stateDir === 'string' && validated.stateDir.length > 0);
+
+  const githubWatchMod = (await import('dsh-superagent/github-watch')) as unknown as {
+    name: string;
+    apply: (ctx: unknown) => void;
+  };
+  assert.equal(githubWatchMod.name, 'dsh-superagent-github');
+  assert.equal(typeof githubWatchMod.apply, 'function');
+
+  const feishuWatchMod = (await import('dsh-superagent/feishu-watch')) as unknown as {
+    name: string;
+    apply: (ctx: unknown) => void;
+  };
+  assert.equal(feishuWatchMod.name, 'dsh-superagent-feishu');
+  assert.equal(typeof feishuWatchMod.apply, 'function');
+
+  const superagentClientPath = path.join(rootDir, 'node_modules/dsh-superagent/lib/client.js');
+  assert.ok(fs.existsSync(superagentClientPath));
+  const superagentClientCode = fs.readFileSync(superagentClientPath, 'utf8');
+  assert.ok(superagentClientCode.includes('id: "dsh-superagent"'));
+  assert.ok(superagentClientCode.includes('sidebar.panellist'));
+  assert.ok(superagentClientCode.includes('__dshBrowserTabsStore'));
+  assert.ok(superagentClientCode.includes('{ name: "settings.section", id: "mcp"'));
+  assert.equal(superagentClientCode.includes('settings.plugins.tab'), false);
+
+  const webAppPkg = JSON.parse(
+    fs.readFileSync(path.join(nmScopeDir, 'dsh-web-app/package.json'), 'utf8'),
+  );
+  assert.ok(webAppPkg.dsh.bundle.patch.includes('./presets/superagent.patch.yml'));
+  assert.equal(webAppPkg.dependencies['dsh-superagent'], '0.1.0');
+  const superagentPatchPath = path.join(nmScopeDir, 'dsh-web-app/presets/superagent.patch.yml');
+  assert.ok(fs.existsSync(superagentPatchPath));
+  const superagentPatchYaml = fs.readFileSync(superagentPatchPath, 'utf8');
+  assert.ok(superagentPatchYaml.includes('name: dsh-superagent/feishu-watch'));
+  assert.ok(!superagentPatchYaml.includes('disabled: true'));
+});
+
+test('13. [Stale Combo Revision Fallback] Patches dsh-client-modules to rebuild combo JS bundles even when request &rev= is from an older server revision', () => {
+  const clientModulesCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-modules/lib/index.js'),
+    'utf8',
+  );
+  assert.ok(
+    clientModulesCode.includes(
+      '(requestUrl.pathname === PLUGIN_ROUTE || requestUrl.pathname === "/plugins/") && requestUrl.search.startsWith("??")',
+    ),
+  );
+  assert.ok(clientModulesCode.includes('fallbackCombo = buildCombo(records, this.readSourceMap)'));
+  assert.ok(clientModulesCode.includes('text/javascript; charset=utf-8'));
+});
+
+test('14. [Multi-Account & Custom Bot Connector Hub] Syncs POST connectors/ingest route and BotConnectorHub UI into node_modules/dsh-superagent', () => {
+  const superagentIndexCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-superagent/lib/index.js'),
+    'utf8',
+  );
+  assert.ok(superagentIndexCode.includes('"POST connectors/ingest"'));
+
+  const superagentClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-superagent/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(superagentClientCode.includes('function BotConnectorHub()'));
+  assert.ok(superagentClientCode.includes('function ConnectorStatusSummary()'));
+  assert.ok(superagentClientCode.includes('多账号与自定义产品机器人接入中心'));
+  assert.ok(superagentClientCode.includes('+ 新增钉钉账号'));
+  assert.ok(superagentClientCode.includes('+ 添加自定义产品机器人'));
+});
+
+test('15. [dsh-purge-community Integration] Syncs dsh-purge-community bundle, qualifies 0.2.2-rc.1 host, validates unrestricted/redteam presets, and guards container restarts', async () => {
+  const webAppPkg = JSON.parse(
+    fs.readFileSync(path.join(nmScopeDir, 'dsh-web-app/package.json'), 'utf8'),
+  );
+  assert.ok(webAppPkg.dsh.bundle.patch.includes('./presets/purge.patch.yml'));
+  assert.equal(webAppPkg.dependencies['dsh-purge-community'], '1.6.52');
+
+  const purgePatchPath = path.join(nmScopeDir, 'dsh-web-app/presets/purge.patch.yml');
+  assert.equal(fs.existsSync(purgePatchPath), true);
+  const purgePatchYaml = fs.readFileSync(purgePatchPath, 'utf8');
+  assert.ok(purgePatchYaml.includes('dsh-purge-community'));
+  assert.ok(purgePatchYaml.includes('dsh-purge-community/presets-plugin'));
+  assert.ok(purgePatchYaml.includes('dsh-purge-community/redteam'));
+  assert.ok(purgePatchYaml.includes('dsh-purge-community/redteam/ui'));
+
+  const communityMod = (await import(
+    path.join(rootDir, 'node_modules/dsh-purge-community/lib/community.js')
+  )) as {
+    compatibility: (aiBase: string) => {
+      host_version: string;
+      qualified: boolean;
+      level: string;
+    };
+  };
+  const compat = communityMod.compatibility(nmScopeDir);
+  assert.equal(compat.host_version, '0.2.2-rc.1');
+  assert.equal(compat.qualified, true);
+  assert.equal(compat.level, 'qualified');
+
+  const compositionMod = (await import(
+    path.join(rootDir, 'node_modules/dsh-purge-community/lib/redteam/preset-composition.js')
+  )) as {
+    readPresetDefinition: (
+      id: string,
+      dir: string,
+    ) => { id: string; name: string; plugins: Array<{ id: string; name: string; group?: boolean; config?: unknown }> };
+  };
+  for (const presetId of ['unrestricted', 'redteam']) {
+    const presetDir = path.join(rootDir, 'node_modules/dsh-purge-community/presets', presetId);
+    const def = compositionMod.readPresetDefinition(presetId, presetDir);
+    assert.equal(def.id, presetId);
+    const serialized = JSON.stringify(def.plugins);
+    assert.ok(!serialized.includes('dsh-tool-subagent-control/list-agents'));
+    assert.ok(serialized.includes('@deepseek-ai/dsh-tool-subagent-control'));
+  }
+
+  const coreMod = (await import(
+    path.join(rootDir, 'node_modules/dsh-purge-community/lib/core.js')
+  )) as {
+    ALL_PATCHES: Array<{ id: number; optional?: boolean }>;
+    applyPatches: (
+      aiBase: string,
+      patches: unknown,
+      opts: { surface: string },
+    ) => Promise<unknown>;
+    patchStatus: (
+      aiBase: string,
+      patches: unknown,
+      opts: { surface: string },
+    ) => Promise<Record<number, string>>;
+  };
+  await coreMod.applyPatches(nmScopeDir, coreMod.ALL_PATCHES, { surface: 'web' });
+  const status = await coreMod.patchStatus(nmScopeDir, coreMod.ALL_PATCHES, { surface: 'web' });
+  const skippedPatches = coreMod.ALL_PATCHES.filter(
+    (p) => !['applied', 'already', 'na'].includes(status[p.id] || ''),
+  );
+  assert.deepEqual(skippedPatches, []);
+
+  const purgeClientJs = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-purge-community/client.js'),
+    'utf8',
+  );
+  assert.ok(purgeClientJs.includes('label: "破甲控制台 (dsh-purge)"'));
+  assert.ok(!purgeClientJs.includes('return window.localStorage.getItem(DRILL_AUTH_KEY) === "1";'));
+
+  process.env.DSH_CONTAINER_MANAGED = '1';
+  const webMod = (await import(
+    path.join(rootDir, 'node_modules/dsh-purge-community/lib/web.js')
+  )) as {
+    scheduleRestart: () => { restarting: boolean };
+  };
+  assert.deepEqual(webMod.scheduleRestart(), { restarting: false });
+});
+
+test('16. [Workspace Automation & Group Folder] Places 自动化任务 and 群组 under 默认工作区 and registers dsh-group-hub main panel', () => {
+  applyDshClientPatches(rootDir);
+
+  const workspaceClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(workspaceClientCode.includes('data-testid": "workspace-automation-row"'));
+  assert.ok(workspaceClientCode.includes('data-testid": "workspace-groups-folder"'));
+  assert.ok(workspaceClientCode.includes('`workspace-group-room-${rm.id}`'));
+  assert.ok(workspaceClientCode.includes('globalThis.__dshSelectMainPanel'));
+
+  const sidebarClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-sidebar/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(sidebarClientCode.includes('id !== "schedules"'));
+
+  const scheduleClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-schedule/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(scheduleClientCode.includes('key: "dsh-group-hub"'));
+  assert.ok(scheduleClientCode.includes('}, DshMultiAgentGroupHub));'));
+  assert.ok(scheduleClientCode.includes('"data-dsh-tip-member": "true"'));
+  assert.ok(scheduleClientCode.includes('"data-dsh-tip-tag": "点击启用 · 来源：群组"'));
+
+  assert.ok(workspaceClientCode.includes('bindSessionToRoom(sessionId, roomId)'));
+  assert.ok(workspaceClientCode.includes('syncActiveTabSession(sessionId)'));
+
+  const convClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-conversation/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(convClientCode.includes('`native-bot-chip-${conn.id}`'));
+  assert.ok(convClientCode.includes('"data-dsh-tip-member": "true"'));
+  assert.ok(convClientCode.includes('"data-dsh-tip-tag": "点击启用 · 来源：群组"'));
+});
