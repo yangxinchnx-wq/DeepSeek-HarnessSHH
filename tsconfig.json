@@ -21,5 +21,10 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "dist",
+    "vendor",
+    "node_modules"
+  ]
 }
