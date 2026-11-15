@@ -91,6 +91,12 @@ function captureServices(ctx) {
   } catch (_e) {}
 }
 globalThis.__dshHarnessLog = [];
+window.addEventListener("error", function (e) {
+  try { globalThis.__dshHarnessLog.push("window-error: " + String(e.message).slice(0, 200) + " @ " + String(e.filename||"").slice(-40) + ":" + (e.lineno||0)); } catch (_e) {}
+});
+window.addEventListener("unhandledrejection", function (e) {
+  try { globalThis.__dshHarnessLog.push("unhandled-rejection: " + String(e.reason && e.reason.message || e.reason).slice(0, 200)); } catch (_e) {}
+});
 function harnessLog(kind, err) {
   try {
     globalThis.__dshHarnessLog.push(kind + ": " + (err && err.stack ? String(err.stack).split("\n").slice(0, 3).join(" | ") : String(err)));
