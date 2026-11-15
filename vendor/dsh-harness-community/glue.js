@@ -99,8 +99,17 @@ window.addEventListener("unhandledrejection", function (e) {
 });
 function harnessLog(kind, err) {
   try {
-    globalThis.__dshHarnessLog.push(kind + ": " + (err && err.stack ? String(err.stack).split("\n").slice(0, 3).join(" | ") : String(err)));
-  } catch (_e) {}
+    var entry = kind + ': ' + (err && err.stack ? String(err.stack).split(String.fromCharCode(10)).slice(0, 3).join(' | ') : String(err));
+    globalThis.__dshHarnessLog.push(entry);
+    try {
+      var stored = [];
+      try { stored = JSON.parse(sessionStorage.getItem('dsh_harness_log') || '[]'); } catch (_e2) {}
+      stored.push(entry);
+      if (stored.length > 24) stored = stored.slice(-24);
+      sessionStorage.setItem('dsh_harness_log', JSON.stringify(stored));
+    } catch (_e3) {}
+  } catch (_e4) {}
+}
 }
 
 function getSessionListSnapshot() {
