@@ -598,6 +598,13 @@ export function buildPreset2Css(): string {
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_brand,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_brand{display:none!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pXSMma_previewBadge,body[data-dsh-theme-id="${PRESET2_ID}"] .pXSMma_previewBadge{display:none!important}`,
 
+    // 10c. rc.1 alignment: 新会话 button shares the top row with the sidebar toggle.
+    // transform moves it without touching layout flow (collapse-safe); the row is
+    // pointer-transparent so the toggle beneath stays clickable.
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow{transform:translateY(-44px)!important;pointer-events:none!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSession,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:calc(100% - 44px)!important;max-width:calc(100% - 44px)!important;flex:0 0 auto!important;pointer-events:auto!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSessionShortcut,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSessionShortcut{display:none!important}`,
+
     // 11. Universal Theme-Adaptive Floating Explanation Tooltip (#dsh-themed-tooltip-card & [role="tooltip"])
     `#dsh-themed-tooltip-card{position:fixed!important;left:0;top:0;z-index:2147483646!important;pointer-events:none!important;max-width:316px!important;min-width:168px!important;padding:10px 13px!important;border-radius:14px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;gap:5px!important;opacity:0;visibility:hidden;transform:translate3d(0,4px,0) scale(0.98);transition:opacity .14s cubic-bezier(.22,1,.36,1),transform .14s cubic-bezier(.22,1,.36,1),visibility .14s ease!important;font-family:var(--dsw-alias-font-sans,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)!important;background-color:#ffffff!important;background-image:linear-gradient(145deg,#ffffff 0%,#f8fafc 100%)!important;border:1px solid rgba(15,23,42,0.11)!important;box-shadow:0 12px 28px -6px rgba(15,23,42,0.14),0 4px 10px -2px rgba(15,23,42,0.06),inset 0 1px 0 #ffffff!important;color:#0f172a!important}`,
     `#dsh-themed-tooltip-card[data-has-cols="true"]{max-width:468px!important;min-width:348px!important;padding:11px 14px!important}`,
