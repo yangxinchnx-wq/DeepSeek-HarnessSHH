@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+workspaces/
+.dsh-superagent/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.lock
+bun.lock
+ssh/.vault.enc
+.DS_Store
+*.log
+.env*
+!.env.example
