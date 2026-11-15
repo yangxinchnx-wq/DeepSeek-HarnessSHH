@@ -110,7 +110,6 @@ function harnessLog(kind, err) {
     } catch (_e3) {}
   } catch (_e4) {}
 }
-}
 
 function getSessionListSnapshot() {
   try {
