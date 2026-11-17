@@ -71,7 +71,14 @@ var CSS_EXTRA = [
   // except the genuinely dark liquid-glass/gray-dark presets.
   String.raw`[role="tooltip"] [class*="_keys_"],[class*="_tooltip_"][class*="_joined_"]{background:rgba(15,23,42,.08)!important;color:#1f2430!important;border:1px solid rgba(15,23,42,.12)!important}`,
   String.raw`body[data-ds-dark-theme]:not([data-dsh-theme-id="preset-1"]):not([data-dsh-theme-id="preset-2"]) [role="tooltip"] [class*="_keys_"],body[data-ds-dark-theme]:not([data-dsh-theme-id="preset-1"]):not([data-dsh-theme-id="preset-2"]) [class*="_tooltip_"][class*="_joined_"]{background:rgba(255,255,255,.14)!important;color:#f1f5f9!important;border-color:rgba(255,255,255,.18)!important}`,
-  String.raw`body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [role="tooltip"] [class*="_keys_"],body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [class*="_tooltip_"][class*="_joined_"]{background:rgba(255,255,255,.14)!important;color:#f8fafc!important;border-color:rgba(255,255,255,.18)!important}`
+  String.raw`body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [role="tooltip"] [class*="_keys_"],body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [class*="_tooltip_"][class*="_joined_"]{background:rgba(255,255,255,.14)!important;color:#f8fafc!important;border-color:rgba(255,255,255,.18)!important}`,
+  // Global-nav sidebar toggle: the native expand/collapse control lives in the
+  // conversation header corner, which the opened right panel itself can cover —
+  // once that happens there is no visible way to close the panel. A permanent
+  // icon button sits right after the nav's 更多 button instead (user request).
+  String.raw`[data-dsh-nav-sidebar-toggle]{display:inline-flex!important;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;border:none;background:transparent;color:var(--dsw-alias-label-secondary,#6E7180);cursor:pointer;flex:0 0 auto;padding:0;margin-left:2px;transition:background .12s ease,color .12s ease}`,
+  String.raw`[data-dsh-nav-sidebar-toggle]:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.06))!important;color:var(--dsw-alias-label-primary,#2B2D38)}`,
+  String.raw`[data-dsh-nav-sidebar-toggle="open"]{background:var(--dsw-alias-state-business-tertiary,rgba(255,106,43,.14))!important;color:var(--dsw-alias-state-business-primary,#FF6A2B)}`
 ].join(String.fromCharCode(10));
 var LUMINEX_CSS = __LUMINEX_CSS__;
 var luminexRuntime = {
@@ -858,6 +865,107 @@ function syncThemeAttrs(snapshot) {
 // directly in apply (never inside ctx.inject callbacks — service registration
 // timing must not gate the UI), and every portal reads services lazily.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Global-nav sidebar toggle: mounts an icon button right after the nav's 更多
+// button and keeps it in sync with the right panel's expanded state.
+//
+// Opening/closing goes straight through the panel's own React actions
+// (actions.setExpanded) read off the panel root's fiber — the native chrome
+// buttons are unreliable here: the collapse control can be visually covered
+// in the 开始 home state and clicking it is a no-op in some docked states,
+// which left the panel impossible to close. The panel root carries
+// data-sidebar-right-open="true" only while expanded, which is the one
+// reliable open-state signal (the collapse button stays mounted after close).
+// ---------------------------------------------------------------------------
+var NAV_TOGGLE_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="2.5" width="5" height="11" rx="1.4" fill="currentColor" opacity=".28"/></svg>';
+function mountNavSidebarToggle() {
+  var btn = null;
+  function findMoreButton(nav) {
+    if (!nav) return null;
+    var buttons = Array.from(nav.querySelectorAll("button"));
+    return buttons.find(function (b) {
+      return (b.textContent || "").trim() === "更多";
+    }) || null;
+  }
+  function findNav() {
+    return Array.from(document.querySelectorAll("nav")).find(function (n) {
+      return findMoreButton(n);
+    }) || null;
+  }
+  function rightPanelOpen() {
+    var root = document.querySelector("[data-sidebar-right-panel]");
+    return !!root && root.getAttribute("data-sidebar-right-open") === "true";
+  }
+  function panelActions() {
+    var root = document.querySelector("[data-sidebar-right-panel]");
+    var host = root ||
+      document.querySelector("[data-sidebar-right-toggle]") ||
+      document.querySelector("[data-sidebar-right-expand]");
+    if (!host) return null;
+    var fid = Object.keys(host).find(function (k) { return k.indexOf("__reactFiber$") === 0; });
+    if (!fid) return null;
+    for (var f = host[fid]; f; f = f.return) {
+      var p = f.memoizedProps || {};
+      if (p.actions && typeof p.actions.setExpanded === "function") {
+        var sid = (root && root.getAttribute("data-sidebar-right-session")) ||
+          (p.sessionId || "") ||
+          (getDshBrowserTabsStore().activeSessionId || "");
+        if (sid) return { actions: p.actions, sessionId: sid };
+      }
+    }
+    return null;
+  }
+  function applyExpanded(open) {
+    var via = panelActions();
+    if (via) {
+      try {
+        via.actions.setExpanded(via.sessionId, open);
+        return true;
+      } catch (_e) {}
+    }
+    var native = open
+      ? document.querySelector("[data-sidebar-right-expand]")
+      : document.querySelector("[data-sidebar-right-toggle]");
+    if (native) { native.click(); return true; }
+    return false;
+  }
+  function sync() {
+    if (!btn || !btn.isConnected) return;
+    var open = rightPanelOpen();
+    btn.setAttribute("data-dsh-nav-sidebar-toggle", open ? "open" : "closed");
+    btn.setAttribute("aria-label", open ? "收起侧边栏" : "打开右侧边栏");
+    btn.title = open ? "收起侧边栏" : "打开右侧边栏";
+  }
+  function ensure() {
+    var nav = findNav();
+    var more = findMoreButton(nav);
+    if (!more) return;
+    if (btn && btn.isConnected && btn.parentElement === more.parentElement) {
+      // Keep it immediately after 更多 even if dsh reorders the nav.
+      if (more.nextElementSibling !== btn) more.parentElement.insertBefore(btn, more.nextElementSibling);
+      sync();
+      return;
+    }
+    if (btn && btn.isConnected) { try { btn.remove(); } catch (_e) {} }
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("data-dsh-nav-sidebar-toggle", "closed");
+    btn.innerHTML = NAV_TOGGLE_SVG;
+    btn.addEventListener("click", function () {
+      try { applyExpanded(!rightPanelOpen()); } catch (_e) {}
+      setTimeout(sync, 350);
+    });
+    if (more.nextElementSibling) more.parentElement.insertBefore(btn, more.nextElementSibling);
+    else more.parentElement.appendChild(btn);
+    sync();
+  }
+  setInterval(function () {
+    try { ensure(); } catch (_e) {}
+  }, 600);
+  if (document.body) ensure();
+  else document.addEventListener("DOMContentLoaded", function () { ensure(); });
+}
+
 var inject = ["slots", "locale"];
 function apply(ctx) {
   try {
@@ -961,6 +1069,11 @@ function apply(ctx) {
     mountPresetSeatDock();
   } catch (e) {
     harnessLog("preset-seat-dock", e);
+  }
+  if (FLAGS.navToggle !== false) try {
+    mountNavSidebarToggle();
+  } catch (e) {
+    harnessLog("nav-sidebar-toggle", e);
   }
   if (FLAGS.insets === true) try {
     mountConversationInsets(ctx);
