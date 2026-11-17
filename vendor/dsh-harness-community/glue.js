@@ -40,7 +40,38 @@ var clsx = function () {
 
 var CSS_EXTRA = [
   String.raw`[data-dsh-harness-tabs-anchor]{flex:1 1 auto;min-width:0;display:flex;overflow:hidden;height:100%}`,
-  String.raw`.wSkVaW_titleRow{display:flex!important;align-items:center!important}`
+  String.raw`.wSkVaW_titleRow{display:flex!important;align-items:center!important}`,
+  // Hide the top-right session name (conversation header crumbs) — the tabs
+  // already name every conversation.
+  String.raw`.wSkVaW_crumbs{display:none!important}`,
+  // The header preset label (标准模式…) moves down to the composer status row;
+  // hide the header original, the dock portal mirrors it live.
+  String.raw`.wSkVaW_headerActions [data-slot="conversation.session.header.actions"]{display:none!important}`,
+  String.raw`[data-dsh-harness-portal="preset-seat-dock"]{display:inline-flex!important;align-items:center!important;height:100%!important;flex:0 0 auto!important;margin-right:8px}`,
+  // FIX 3 (revised): the native dsh layout already places 更多操作 / 打开侧边栏
+  // adjacent at the top-right, clearing the Windows caption buttons (~138px).
+  // But .wSkVaW_titleRow has overflow:hidden and dsh's headerCorner carried a
+  // -16px right margin that pushed the sidebar button past the clip edge, so its
+  // right half was clipped and clicks landed on the header instead of the button.
+  // Neutralise that negative margin (and any prior override) to zero: both buttons
+  // then sit inside the clip at x≈1196..1268, stay adjacent, and remain clickable.
+  String.raw`.wSkVaW_headerUtilities{margin-right:0!important}`,
+  String.raw`.wSkVaW_headerCorner{margin-right:0!important}`,
+  // FIX 2b: solid top strip filled by the Electron shell with the native caption
+  // colour, so the title bar and the page merge seamlessly (no colour block under
+  // min/max/close). MUST use a NEGATIVE z-index: at z-index:0 this fixed strip
+  // painted over the header utility buttons (更多操作 / 打开侧边栏) and hid them.
+  // At -1 it sits above the body background but below all app content + buttons.
+  String.raw`#dsh-titlebar-fill{position:fixed;top:0;left:0;right:0;height:52px;background:var(--dsh-caption-color,transparent);pointer-events:none;z-index:-1}`,
+  // FIX 1: Settings dialog is portalled to <body>; make sure Electron's frameless
+  // drag region never swallows clicks on its controls (close X in particular).
+  String.raw`[data-shortcut-modal="settings"],.VOzbGW_overlay,.VOzbGW_panel,.VOzbGW_panel *{-webkit-app-region:no-drag!important}`,
+  // FIX 4: tooltip shortcut-key badge shipped by dsh is dark-on-dark in light
+  // themes ("打开侧边栏 Ctrl+Shift+B"). Give it a readable light chip everywhere
+  // except the genuinely dark liquid-glass/gray-dark presets.
+  String.raw`[role="tooltip"] [class*="_keys_"],[class*="_tooltip_"][class*="_joined_"]{background:rgba(15,23,42,.08)!important;color:#1f2430!important;border:1px solid rgba(15,23,42,.12)!important}`,
+  String.raw`body[data-ds-dark-theme]:not([data-dsh-theme-id="preset-1"]):not([data-dsh-theme-id="preset-2"]) [role="tooltip"] [class*="_keys_"],body[data-ds-dark-theme]:not([data-dsh-theme-id="preset-1"]):not([data-dsh-theme-id="preset-2"]) [class*="_tooltip_"][class*="_joined_"]{background:rgba(255,255,255,.14)!important;color:#f1f5f9!important;border-color:rgba(255,255,255,.18)!important}`,
+  String.raw`body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [role="tooltip"] [class*="_keys_"],body[data-dsh-theme-id="preset-1"]:not([data-dsh-preset1-mode="light"]) [class*="_tooltip_"][class*="_joined_"]{background:rgba(255,255,255,.14)!important;color:#f8fafc!important;border-color:rgba(255,255,255,.18)!important}`
 ].join(String.fromCharCode(10));
 var LUMINEX_CSS = __LUMINEX_CSS__;
 var luminexRuntime = {
@@ -505,9 +536,30 @@ function mountTabsBar(ctx) {
         createNewTab: function (opt, opts) {
           liveHelpers.startSession((opts && opts.workspaceId) || liveHelpers.workspaces[0] && liveHelpers.workspaces[0].workspaceId, {});
         },
-        closeTab: function (id) {
+        closeTab: function (id, currentTabIds, activeSessionId) {
           var tabStore = getDshBrowserTabsStore();
+          var liveHelpers = resolveWorkspaceHelpers(svc.ctx || {});
           tabStore.closedIds.add(id);
+          var oi = tabStore.order.indexOf(id);
+          if (oi !== -1) tabStore.order.splice(oi, 1);
+          var list = Array.isArray(currentTabIds) ? currentTabIds.slice() : tabStore.order.slice();
+          var remaining = list.filter(function (t) {
+            return t !== id && !tabStore.closedIds.has(t) && String(t).indexOf("__opt_tab_") !== 0;
+          });
+          var isActive = id === (activeSessionId || tabStore.activeSessionId || "");
+          if (isActive) {
+            if (remaining.length > 0) {
+              // Browser-like: hand focus to the nearest surviving tab.
+              var closedIdx = list.indexOf(id);
+              var pick = remaining[Math.max(0, Math.min(closedIdx === -1 ? remaining.length - 1 : closedIdx, remaining.length - 1))];
+              try { liveHelpers.open(pick); } catch (e) { harnessLog("closeTab.open", e); }
+            } else {
+              // Closed the last tab: open a fresh draft session (new-tab page).
+              try {
+                liveHelpers.startSession(liveHelpers.workspaces[0] && liveHelpers.workspaces[0].workspaceId, {});
+              } catch (e) { harnessLog("closeTab.startSession", e); }
+            }
+          }
           tabStore.emit(true);
         },
         renameTab: function (id, title) {
@@ -529,6 +581,77 @@ function mountTabsBar(ctx) {
       titleRow.insertBefore(wrapper, titleRow.firstChild);
       return wrapper;
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Preset seat dock: mirror the conversation header's Agent preset label
+// (标准模式 …) into the composer status row (轮数 / 缓存命中 / 上下文), same
+// line, vertically aligned. The header original is hidden via CSS; this
+// mirror reads it live so preset switches still update the dock copy.
+// ---------------------------------------------------------------------------
+function readPresetSeatSource() {
+  var label = document.querySelector('.wSkVaW_headerActions .SVAs4q_label')
+    || document.querySelector('[data-slot="conversation.session.header.actions"] span[title]');
+  if (!label || !label.textContent || !label.textContent.trim()) return null;
+  return {
+    cls: label.className,
+    text: label.textContent.trim(),
+    title: label.getAttribute("title") || "",
+    html: label.innerHTML,
+  };
+}
+
+function PresetSeatMirror() {
+  var state = react.useState(function () { return readPresetSeatSource(); });
+  var current = state[0];
+  var setSnapshot = state[1];
+  react.useEffect(function () {
+    var lastText = current ? current.text : null;
+    var lastTitle = current ? current.title : null;
+    var had = !!current;
+    var timer = setInterval(function () {
+      var snap = readPresetSeatSource();
+      if (!snap) {
+        if (had) {
+          had = false;
+          setSnapshot(null);
+        }
+        return;
+      }
+      if (snap.text !== lastText || snap.title !== lastTitle) {
+        lastText = snap.text;
+        lastTitle = snap.title;
+        had = true;
+        setSnapshot(snap);
+      }
+    }, 500);
+    return function () { clearInterval(timer); };
+  }, []);
+  if (!current) return null;
+  return react.createElement("span", {
+    "data-dsh-preset-seat-mirror": "1",
+    style: { display: "inline-flex", alignItems: "center", height: "100%", whiteSpace: "nowrap", flex: "0 0 auto" },
+  }, react.createElement("span", {
+    className: current.cls,
+    title: current.title,
+    dangerouslySetInnerHTML: { __html: current.html },
+  }));
+}
+
+function mountPresetSeatDock() {
+  portalMount({
+    name: "preset-seat-dock",
+    hostTag: "span",
+    render: function () {
+      return react.createElement(PresetSeatMirror);
+    },
+    findAnchor: function () {
+      var dock = document.querySelector('.uV2eYG_dock');
+      if (!dock || !readPresetSeatSource()) return null;
+      return dock;
+    },
+    anchorIndex: 0,
   });
 }
 
@@ -780,6 +903,9 @@ function apply(ctx) {
               var snap = uwNow.selection && uwNow.selection.getSnapshot && uwNow.selection.getSnapshot();
               var id = (snap && snap.sessionId) || "";
               if (id && tabsStore.activeSessionId !== id) {
+                // One conversation = one tab: re-opening a conversation from the
+                // sidebar restores its tab even if the tab was closed earlier.
+                if (tabsStore.closedIds.has(id)) tabsStore.closedIds.delete(id);
                 tabsStore.activeSessionId = id;
                 tabsStore.emit(true);
               }
@@ -793,6 +919,7 @@ function apply(ctx) {
               var id = "";
               try { id = (snap && snap.sessionId) || ""; } catch (_e1) {}
               if (id && tabsStore.activeSessionId !== id) {
+                if (tabsStore.closedIds.has(id)) tabsStore.closedIds.delete(id);
                 tabsStore.activeSessionId = id;
                 tabsStore.emit(true);
               }
@@ -829,6 +956,11 @@ function apply(ctx) {
     mountTabsBar(ctx);
   } catch (e) {
     harnessLog("tabs-bar", e);
+  }
+  if (FLAGS.seatdock !== false) try {
+    mountPresetSeatDock();
+  } catch (e) {
+    harnessLog("preset-seat-dock", e);
   }
   if (FLAGS.insets === true) try {
     mountConversationInsets(ctx);

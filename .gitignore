@@ -16,3 +16,4 @@ ssh/.vault.enc
 *.sqlite-wal
 *.lock
 .aistudio/
+.workbuddy/

@@ -221,7 +221,9 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 							if (store.optimisticActiveId === firstOptKey) store.optimisticActiveId = void 0;
 						}
 					}
-					if (summary.blank && !summary.running && !summary.promptAttempted && !store.order.includes(id) && !store.stableKeys.has(id)) {
+					// One conversation = one tab: the session the sidebar/main panel has
+					// active always keeps its own tab, blank 新会话 drafts included.
+					if (summary.blank && !summary.running && !summary.promptAttempted && !store.order.includes(id) && !store.stableKeys.has(id) && id !== store.activeSessionId) {
 						continue;
 					}
 					validSet.add(id);

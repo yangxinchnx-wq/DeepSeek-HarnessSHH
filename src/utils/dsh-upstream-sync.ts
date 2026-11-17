@@ -1884,12 +1884,12 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
     extractTemplateBlock(sshSource, 56, sshSource.split('\n').length),
   );
   const tabsBlock = evalTemplate(
-    extractTemplateBlock(patchesSource, 50, 601),
+    extractTemplateBlock(patchesSource, 50, 603),
     { SSH_CLIENT_RUNTIME_COMPONENTS: sshBlock },
   );
-  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 1999, 2651));
-  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3862, 4591));
-  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1091, 1601));
+  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 2001, 2653));
+  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3864, 4593));
+  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1093, 1603));
 
   // Custom tabs CSS (BROWSER_TAB_CSS_APPEND + SSH_CLIENT_CSS_APPEND) — quoted
   // string-concat consts, evaluated as JS expressions.

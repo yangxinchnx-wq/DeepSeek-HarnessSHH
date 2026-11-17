@@ -163,14 +163,33 @@ let lastThemeReport = null;
 function applyOverlay(win, report) {
   lastThemeReport = report || null;
   if (process.platform !== 'win32' || typeof win?.setTitleBarOverlay !== 'function' || win.isDestroyed()) return;
+  // FIX 2: use the theme's own fixed caption palette. dsh ships its surface as a
+  // background IMAGE with a dual-mode body, so the body's computed bg/fg are a
+  // poor source for caption colors (they produced dark/black caption squares in
+  // the "高级灰" preset). Only the default/system theme follows the system look;
+  // preset-1 / preset-2 use their dedicated, always-light-or-dark captions.
+  const themeId = report?.themeId || '';
+  const knownTheme = themeId === 'preset-1' || themeId === 'preset-2';
   const base = overlayForReport(report);
-  const color = report?.bg ? cssColorToHex(report.bg, base.color) : base.color;
-  const symbolColor = report?.fg ? cssColorToHex(report.fg, base.symbolColor) : base.symbolColor;
+  const color = knownTheme ? base.color : (report?.bg ? cssColorToHex(report.bg, base.color) : base.color);
+  const symbolColor = knownTheme ? base.symbolColor : (report?.fg ? cssColorToHex(report.fg, base.symbolColor) : base.symbolColor);
   try {
     win.setTitleBarOverlay({ ...base, color, symbolColor });
-    console.log(`[electron-shell] overlay: ${color} / ${symbolColor} (theme=${report?.themeId || 'default'}${report?.mode ? ` ${report.mode}` : ''})`);
+    console.log(`[electron-shell] overlay: ${color} / ${symbolColor} (theme=${themeId || 'default'}${report?.mode ? ` ${report.mode}` : ''})`);
   } catch (err) {
     console.warn('[electron-shell] setTitleBarOverlay failed:', err?.message);
+  }
+  // FIX 2b: paint the web page's top strip with the exact caption color so the
+  // native title bar (above) and the page (below) form one continuous surface.
+  // dsh themes fill the body with a background IMAGE; its top edge colour never
+  // exactly matches the solid caption colour, which read as a "色块" under the
+  // min/max/close buttons. A synchronized solid strip removes that seam.
+  if (!win.isDestroyed()) {
+    win.webContents.executeJavaScript(
+      `(() => { var el = document.getElementById('dsh-titlebar-fill');
+         if (!el) { el = document.createElement('div'); el.id = 'dsh-titlebar-fill'; document.body.appendChild(el); }
+         el.style.setProperty('--dsh-caption-color', '${color}'); })()`
+    ).catch(() => {});
   }
 }
 
