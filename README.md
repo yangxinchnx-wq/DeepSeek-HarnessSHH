@@ -12,7 +12,21 @@ An open-source agent harness built on the **"Everything is a Plugin"** architect
 3. Start:
    `npm run dev` → open http://127.0.0.1:3000
 
+Or run it as a desktop app (Electron shell, spawns the server itself):
+
+   `npm run desktop`
+
 Ports: `3000` Express server · `3080` dsh web · `3082` local LLM gateway.
+
+## Desktop shell (Electron)
+
+- `npm run desktop` — dev shell: single-instance window, spawns `server.ts` with
+  the system Node (falls back to Electron's embedded Node when absent), reuses a
+  server already listening on :3000, and kills the whole process tree on quit.
+- `npm run desktop:build` — NSIS installer via electron-builder (config in
+  `electron-builder.yml`; server tree ships under `resources/server`). Note:
+  large output since the full `node_modules` is bundled with the server.
+- Shell code: `electron/main.mjs`.
 
 ## Layout
 

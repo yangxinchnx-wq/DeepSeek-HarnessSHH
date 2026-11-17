@@ -1,0 +1,42 @@
+appId: ai.deepseek.harness
+productName: DeepSeek Harness
+
+directories:
+  output: dist-desktop
+  buildResources: electron/build
+
+# Only the shell itself lives in the asar; the server tree is shipped separately
+# via asarUnpack-friendly globs below (native modules need real files on disk).
+files:
+  - electron/main.mjs
+  - package.json
+
+extraResources:
+  # Server sources run from resources/server via tsx, outside the asar.
+  - from: .
+    to: server
+    filter:
+      - server.ts
+      - src/**
+      - ssh/**
+      - vendor/**
+      - public/**
+      - tsconfig.json
+  - from: node_modules
+    to: server/node_modules
+    filter:
+      - "**/*"
+
+asar: true
+
+win:
+  target:
+    - nsis
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+# Native modules (node-pty, koffi) were built for the system Node ABI and the
+# server runs under a spawned Node process, not Electron's ABI — skip rebuild.
+npmRebuild: false

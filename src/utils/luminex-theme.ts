@@ -258,11 +258,11 @@ export function buildLuminexPresetCss(): string {
   const darkTokenDecls = serializeTokensToCssDeclarations(LUMINEX_THEME_TOKENS);
   const lightTokenDecls = serializeTokensToCssDeclarations(LUMINEX_LIGHT_PULL_TOKENS);
   const syncTransition =
-    'background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.22,1,.36,1)';
+    'background-color .12s cubic-bezier(.22,1,.36,1),border-color .12s cubic-bezier(.22,1,.36,1),color .12s cubic-bezier(.22,1,.36,1),opacity .12s cubic-bezier(.22,1,.36,1),transform .12s cubic-bezier(.22,1,.36,1)';
   const universalSurfaceTransition =
-    'background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1)';
+    'background-color .12s cubic-bezier(.22,1,.36,1),border-color .12s cubic-bezier(.22,1,.36,1),color .12s cubic-bezier(.22,1,.36,1)';
   const interactiveControlTransition =
-    'background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),box-shadow .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.22,1,.36,1)';
+    'background-color .12s cubic-bezier(.22,1,.36,1),border-color .12s cubic-bezier(.22,1,.36,1),color .12s cubic-bezier(.22,1,.36,1),transform .12s cubic-bezier(.22,1,.36,1)';
 
   return [
     // 0. Universal Theme-Switching & Interactive Transition Animations (Applies across ALL themes: Light, Dark, System, 极简, 预设 2, 预设 3)
@@ -286,7 +286,7 @@ export function buildLuminexPresetCss(): string {
 
     // 1. Studio Backdrop & Atomic CSS Token Authority (prevents ThemePresenter from ever desyncing tokens)
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"]{--dsh-cpt-t:1;${darkTokenDecls};background-color:#222534!important;background-image:url("${baseUri}")!important;background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important;color:#f8fafc!important;transition:${syncTransition}}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"]::before{content:"";position:fixed;inset:0;background-image:url("${lightUri}");background-size:cover;background-position:center center;background-repeat:no-repeat;opacity:0;pointer-events:none;z-index:0;transition:opacity .28s cubic-bezier(.22,1,.36,1)}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"]::before{content:"";position:fixed;inset:0;background-image:url("${lightUri}");background-size:cover;background-position:center center;background-repeat:no-repeat;opacity:0;pointer-events:none;z-index:0;transition:opacity .14s cubic-bezier(.22,1,.36,1)}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"]{${lightTokenDecls};background-color:#d7d7d7!important;color:#1a1a1a!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"]::before{opacity:1}`,
     `#dsh-luminex-bg-canvas{display:none!important}`,
@@ -294,18 +294,25 @@ export function buildLuminexPresetCss(): string {
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pI_x6G_frame,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pI_x6G_centerCol,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pI_x6G_rightbarCol,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pI_x6G_bottomRow,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root{background:transparent!important;overflow:visible!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_root{background:transparent!important;overflow:hidden!important}`,
 
-    // 2. Main Stage Card (.wSkVaW_body) — Clean Solid/Crisp Surface without white blurry haze or expensive backdrop-filter
+    // 2. Main Stage Card (.wSkVaW_body) & Superagent Stage (.dt-page) — Clean Solid/Crisp Surface without white blurry haze or expensive backdrop-filter
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_body{margin:20px 76px 18px 16px!important;border-radius:24px 96px 24px 24px!important;corner-shape:round!important;background-color:#262b3d!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.08)!important;box-shadow:0 12px 32px -12px rgba(6,8,18,0.28),0 4px 12px -4px rgba(6,8,18,0.16)!important;position:relative!important;overflow:visible!important;transition:${syncTransition}}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_body{background-color:#eaeaea!important;background-image:none!important;border:1px solid rgba(0,0,0,0.075)!important;box-shadow:8px 12px 24px -8px rgba(0,0,0,0.075),2px 4px 10px -2px rgba(0,0,0,0.035)!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_scrollBody{border-radius:23px 95px 23px 23px!important;corner-shape:round!important;background:transparent!important;transition:${syncTransition}}`,
+    `body:not([data-ds-dark-theme]) .dt-page{background-color:#f8f9fb!important;color:#0f172a!important;--dsw-alias-label-primary:#0f172a!important;--dsw-alias-label-secondary:#475569!important;--dsw-alias-label-tertiary:#64748b!important;--dsw-alias-label-caption:#64748b!important;--dsw-alias-bg-layer-1:#ffffff!important;--dsw-alias-bg-layer-2:#f8fafc!important;--dsw-alias-bg-module-platform:#f1f5f9!important;--dsw-alias-border-l2:rgba(15,23,42,0.08)!important;--dsw-alias-border-l3:rgba(15,23,42,0.07)!important;--dsw-alias-border-l4:rgba(15,23,42,0.06)!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dt-page,body[data-dsh-theme-id="${PRESET2_ID}"] .dt-page{margin:14px 18px 14px 12px!important;height:calc(100% - 28px)!important;border-radius:24px!important;background-color:#f8f9fb!important;background-image:none!important;border:1px solid rgba(15,23,42,0.075)!important;box-shadow:0 8px 24px -8px rgba(15,23,42,0.06),0 2px 6px rgba(15,23,42,0.03)!important;transition:${syncTransition}}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"]:not([data-dsh-preset1-mode="light"]) .dt-page{margin:14px 18px 14px 12px!important;height:calc(100% - 28px)!important;border-radius:24px!important;background-color:#262b3d!important;border:1px solid rgba(255,255,255,0.08)!important;box-shadow:0 12px 32px -12px rgba(6,8,18,0.28)!important}`,
+    `body:not([data-ds-dark-theme]) .dt-page .dt-card,body:not([data-ds-dark-theme]) .dt-page .dt-form.dt-block{background-color:#ffffff!important;border:1px solid rgba(15,23,42,0.08)!important;border-radius:16px!important;box-shadow:0 2px 8px -2px rgba(15,23,42,0.04)!important}`,
+    `main#dt-page > div > nav.dt-settings-nav{gap:2px!important;padding:6px!important}`,
+    `main#dt-page > div > nav > button.dt-settings-link,main#dt-page > div > nav > button:nth-of-type(4),main#dt-page > div > nav > button:nth-of-type(5),main#dt-page > div > nav > button:nth-of-type(6){margin-top:0!important;margin-bottom:0!important;padding:4px 10px!important;min-height:28px!important;line-height:18px!important;font-size:13px!important;border-radius:7px!important}`,
+    `main#dt-page > div > nav > div:nth-of-type(1){margin-top:4px!important;padding:6px 2px 2px!important;gap:2px!important}`,
 
     // 3. Left Sidebar (.pI_x6G_sidebarCol), Selected Session Row (.YDXeBa_sessionRow.YDXeBa_selected — Focus Selector 4) & New Session Button (.hHd-Xa_newSession — Focus Selector 3) — Zero white blur/haze
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pI_x6G_sidebarCol{background-color:#202434!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-right:1px solid rgba(255,255,255,0.07)!important;box-shadow:none!important;color:#f8fafc!important;transition:${syncTransition}}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .pI_x6G_sidebarCol{background-color:#dcdcdc!important;background-image:none!important;border-right:1px solid rgba(0,0,0,0.075)!important;box-shadow:none!important;color:#1a1a1a!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSession{background-color:#2d3348!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:9999px!important;color:#f8fafc!important;box-shadow:0 2px 6px -1px rgba(0,0,0,0.20)!important;transition:${interactiveControlTransition}}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSession:hover{background-color:#343b52!important;border-color:rgba(255,255,255,0.14)!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_newSession{background-color:#f3f3f3!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(0,0,0,0.085)!important;border-radius:9999px!important;color:#1a1a1a!important;box-shadow:0 1px 3px rgba(0,0,0,0.04)!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_newSession:hover{background-color:#f8f8f8!important;background-image:none!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSession,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle{background-color:#2d3348!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:9999px!important;color:#f8fafc!important;box-shadow:0 2px 6px -1px rgba(0,0,0,0.20)!important;transition:${interactiveControlTransition}}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSession:hover,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle:hover{background-color:#343b52!important;border-color:rgba(255,255,255,0.14)!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_newSession,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_logoRow > .hHd-Xa_toggle{background-color:#f3f3f3!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(0,0,0,0.085)!important;border-radius:9999px!important;color:#1a1a1a!important;box-shadow:0 1px 3px rgba(0,0,0,0.04)!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_newSession:hover,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .hHd-Xa_logoRow > .hHd-Xa_toggle:hover{background-color:#f8f8f8!important;border-color:rgba(0,0,0,0.13)!important;background-image:none!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSession .hHd-Xa_newSessionLabelMask{mask-image:none!important;-webkit-mask-image:none!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .YDXeBa_sessionRow.YDXeBa_selected{background-color:#2d3348!important;background-image:none!important;background-origin:padding-box!important;background-clip:padding-box!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.09),0 2px 6px -2px rgba(0,0,0,0.18)!important;transition:${interactiveControlTransition}}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .YDXeBa_sessionRow.YDXeBa_selected{background-color:#f2f2f2!important;background-image:none!important;background-origin:padding-box!important;background-clip:padding-box!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.035)!important}`,
@@ -314,13 +321,17 @@ export function buildLuminexPresetCss(): string {
 
     // 4. Top Studio Header & Browser Task Tabs (.wSkVaW_header, .wSkVaW_browserTab — Focus Selector 2) — Zero white blur/haze
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_header,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_headerBlank{background:transparent!important;border-bottom:none!important;box-shadow:none!important;backdrop-filter:none!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTab{background-color:#282d40!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:10px!important;color:#cbd5e1!important;box-shadow:0 1px 3px rgba(0,0,0,0.18)!important;transition:${interactiveControlTransition}}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTab{background-color:#282d40!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:9999px!important;color:#cbd5e1!important;box-shadow:0 1px 3px rgba(0,0,0,0.18)!important;transition:${interactiveControlTransition}}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTab:hover{background-color:#30364c!important;border-color:rgba(255,255,255,0.12)!important;color:#ffffff!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabActive{background-color:#31374e!important;background-image:none!important;border:1px solid rgba(255,255,255,0.11)!important;color:#ffffff!important;box-shadow:0 2px 6px rgba(0,0,0,0.22)!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabAdd{background-color:#2b3044!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:10px!important;color:#f8fafc!important;box-shadow:0 1px 3px rgba(0,0,0,0.18)!important;transition:${interactiveControlTransition}}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabAdd{background-color:#2b3044!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:9999px!important;color:#f8fafc!important;box-shadow:0 1px 3px rgba(0,0,0,0.18)!important;transition:${interactiveControlTransition}}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTab{background-color:#ececec!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(0,0,0,0.075)!important;color:#2e2e2e!important;box-shadow:0 1px 2px rgba(0,0,0,0.03)!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTabActive{background-color:#f4f4f4!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(0,0,0,0.085)!important;color:#1a1a1a!important;box-shadow:0 1px 3px rgba(0,0,0,0.045)!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTabAdd{background-color:#f3f3f3!important;background-image:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(0,0,0,0.085)!important;color:#1a1a1a!important;box-shadow:0 1px 2px rgba(0,0,0,0.035)!important}`,
+    // Header shell text/icons follow the active surface — upstream pins near-white on .wSkVaW_header,
+    // which washes out against the light-pull background.
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_header,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_headerBlank,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_titleRow,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_headerLeading,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabsBar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabTitle,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_browserTabClose,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_headerCorner{color:#f8fafc!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_header,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_headerBlank,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_titleRow,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_headerLeading,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTabsBar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTabTitle,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_browserTabClose,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .wSkVaW_headerCorner{color:#1a1a1a!important}`,
 
     // 5. Hero Headline, Composer Stack & Workspace/Mode Pills (.wSkVaW_composerStack — Focus Selector 1) — Zero white blur/haze
     // In active conversations the composerSeat overlays the scroll body: keep an opaque backdrop
@@ -380,6 +391,15 @@ export function buildLuminexPresetCss(): string {
     `.dsh_cpt_capsule::before{content:"";position:absolute;inset:0;border-radius:999px;corner-shape:round!important;background:linear-gradient(45deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.025) 52%,rgba(8,10,18,0.10) 100%);pointer-events:none;z-index:1}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh_cpt_capsule::before{background:linear-gradient(135deg,rgba(255,255,255,0.62) 0%,rgba(255,255,255,0.14) 48%,rgba(0,0,0,0.05) 100%)}`,
     `.dsh_cpt_capsule:active{cursor:grabbing}`,
+    // 9. Session-switch softening: upstream remounts the conversation root on
+    // switch (~460ms blank while the new session settles) — keep the composer
+    // visible during settling and fade message items in so the pop reads as a
+    // graceful transition.
+    `@keyframes dsh-soft-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] [class*="flowItem"]{animation:dsh-soft-in .18s ease-out both}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:.5;transition:opacity .18s ease-out}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1;transition:opacity .3s ease-out}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh_cpt_capsule{background-color:rgba(56,62,84,0.88);background-image:linear-gradient(45deg,rgba(90,98,128,0.42) 0%,rgba(48,53,74,0.30) 54%,rgba(26,30,44,0.44) 100%);border:1px solid rgba(255,255,255,0.13);box-shadow:12px -6px 28px -6px rgba(6,8,18,0.30),4px -2px 12px -3px rgba(6,8,18,0.16),inset 1px -0.5px 2px rgba(255,255,255,0.20),inset -1px 1px 2.5px rgba(6,8,15,0.26),inset -2px 0 6px rgba(192,38,211,0.15)}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh_cpt_capsule{background-color:rgba(224,222,224,0.94);background-image:linear-gradient(135deg,rgba(242,242,244,0.95) 0%,rgba(212,210,214,0.85) 54%,rgba(198,192,188,0.82) 100%);border:1px solid rgba(255,255,255,0.68);border-bottom-color:rgba(0,0,0,0.12);border-right-color:rgba(0,0,0,0.10);box-shadow:10px 12px 22px -4px rgba(0,0,0,0.20),3px 5px 10px -2px rgba(0,0,0,0.10),inset 1.5px 1.5px 3px #ffffff,inset -1px -1.5px 3px rgba(0,0,0,0.12)}`,
     `.dsh_cpt_glint{position:absolute;bottom:2px;left:3px;width:26px;height:6px;border-radius:999px;corner-shape:round!important;background:radial-gradient(ellipse at center,rgba(255,255,255,0.88) 0%,rgba(255,255,255,0.32) 45%,rgba(255,255,255,0) 78%);transform:rotate(24deg);pointer-events:none;z-index:3}`,
@@ -405,10 +425,10 @@ export function buildPreset2Css(): string {
     .join(';');
 
   const surfaceTransition =
-    'background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1)';
+    'background-color .12s cubic-bezier(.22,1,.36,1),border-color .12s cubic-bezier(.22,1,.36,1),color .12s cubic-bezier(.22,1,.36,1)';
   const springTransition =
-    'background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),box-shadow .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1)';
-  const glowTransition = 'opacity .24s cubic-bezier(.22,1,.36,1),transform .24s cubic-bezier(.22,1,.36,1)';
+    'background-color .12s cubic-bezier(.22,1,.36,1),border-color .12s cubic-bezier(.22,1,.36,1),color .12s cubic-bezier(.22,1,.36,1),transform .12s cubic-bezier(.22,1,.36,1)';
+  const glowTransition = 'opacity .14s cubic-bezier(.22,1,.36,1),transform .14s cubic-bezier(.22,1,.36,1)';
   const elevatedSurfaceBg = 'linear-gradient(135deg,rgba(255,255,255,0.82),rgba(255,255,255,0.42))';
   const elevatedShadow =
     '0 12px 24px -6px rgba(0,0,0,0.08),0 4px 8px rgba(0,0,0,0.04),inset 0 1.5px 2px rgba(255,255,255,0.95),inset 0 -1px 2px rgba(0,0,0,0.05)';
@@ -441,15 +461,13 @@ export function buildPreset2Css(): string {
 
     // 3. Left Sidebar & Tactile Engraved/Elevated Controls (Gentle Feathered Spindle Orange Bloom: airy center, long soft tapered ends, blur(10px))
     `body[data-dsh-theme-id="${PRESET2_ID}"] .pI_x6G_sidebarCol{background-color:#E7E7EC!important;background-image:linear-gradient(135deg,rgba(255,255,255,0.52),rgba(228,228,230,0.32))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-right:1px solid rgba(255,255,255,0.68)!important;box-shadow:inset -1px 0 2px rgba(255,255,255,0.85)!important;color:#2B2D38!important;transition:${surfaceTransition}}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession{position:relative!important;overflow:hidden!important;border-radius:9999px!important;background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.68)!important;box-shadow:${elevatedShadow}!important;color:#2B2D38!important;font-weight:500!important;transition:${springTransition}!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession::before{content:"";position:absolute;left:50%;top:50%;width:94%;height:92%;transform:translate(-50%,-50%);border-radius:10px;background:${spindleOrangeBloom};filter:blur(10px);opacity:0.36;pointer-events:none;transition:${glowTransition};z-index:0}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession > *{position:relative;z-index:1}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:hover{box-shadow:0 14px 26px -6px rgba(0,0,0,0.10),0 6px 14px -2px rgba(255,106,43,0.14),inset 0 2px 3px rgba(255,255,255,1),inset 0 -1px 2px rgba(0,0,0,0.05)!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:hover::before{opacity:0.48;transform:translate(-50%,-50%) scale(1.02)}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:active{transform:scale(0.97)!important;box-shadow:0 3px 6px rgba(0,0,0,0.04),${recessedShadow}!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle{position:relative!important;overflow:hidden!important;border-radius:9999px!important;background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.68)!important;box-shadow:${elevatedShadow}!important;color:#2B2D38!important;font-weight:500!important;transition:${springTransition}!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession::before,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle::before{content:"";position:absolute;left:50%;top:50%;width:94%;height:92%;transform:translate(-50%,-50%);border-radius:9999px;background:${spindleOrangeBloom};filter:blur(10px);opacity:0.36;pointer-events:none;transition:${glowTransition};z-index:0}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession > *,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle > *{position:relative;z-index:1}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:hover,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle:hover{box-shadow:0 14px 26px -6px rgba(0,0,0,0.10),0 6px 14px -2px rgba(255,106,43,0.14),inset 0 2px 3px rgba(255,255,255,1),inset 0 -1px 2px rgba(0,0,0,0.05)!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:hover::before,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle:hover::before{opacity:0.48;transform:translate(-50%,-50%) scale(1.02)}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession:active,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > .hHd-Xa_toggle:active{transform:scale(0.97)!important;box-shadow:0 3px 6px rgba(0,0,0,0.04),${recessedShadow}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSession .hHd-Xa_newSessionLabelMask{mask-image:none!important;-webkit-mask-image:none!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > button:not(.hHd-Xa_newSession){border-radius:10px!important;background-color:#DCDCE0!important;background-image:${recessedBg}!important;box-shadow:${recessedShadow}!important;color:#2B2D38!important;transition:${springTransition}!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_logoRow > button:not(.hHd-Xa_newSession):active{transform:scale(0.97)!important}`,
 
     // 4. Sidebar Selected Session Row & Recessed Wells
     `body[data-dsh-theme-id="${PRESET2_ID}"] .YDXeBa_sessionRow{margin-inline:var(--dsh-sidebar-paint-inset,8px)!important;border:1px solid transparent!important;border-radius:9999px!important;color:#6E7180!important;transition:${springTransition}!important}`,
@@ -473,6 +491,15 @@ export function buildPreset2Css(): string {
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd{border-radius:9999px!important;background-color:#DCDCE0!important;background-image:${recessedBg}!important;border:1px solid rgba(255,255,255,0.55)!important;box-shadow:${recessedShadow}!important;color:#2B2D38!important;transition:${springTransition}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd:hover{background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;box-shadow:${elevatedShadow}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd:active{transform:scale(0.97)!important;box-shadow:${recessedShadow}!important}`,
+    // Session-switch softening (same as preset 1): composer stays visible while
+    // the new session settles, message items fade in instead of popping.
+    `@keyframes dsh-soft-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] [class*="flowItem"]{animation:dsh-soft-in .18s ease-out both}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:.5;transition:opacity .18s ease-out}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1;transition:opacity .3s ease-out}`,
+    // Header shell text/icons follow the neumorphic surface (upstream pins near-white on .wSkVaW_header).
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_header,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerBlank,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_titleRow,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerLeading,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabsBar,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabTitle,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabClose,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerCorner{color:#2B2D38!important}`,
 
     // 6. Hero Control Area & Elevated Frosted Workspace/Mode Capsules
     // Keep the active-phase composer backdrop opaque so messages never show through beneath the dock.
@@ -536,8 +563,8 @@ export function buildPreset2Css(): string {
     `.dshpp-page input:not([type="checkbox"]):not([type="radio"]),.dshpp-page select,.dshpp-page textarea{border-radius:10px!important;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,0.24))!important;background:var(--dsw-alias-bg-base)!important;color:var(--dsw-alias-label-primary)!important;-webkit-text-fill-color:var(--dsw-alias-label-primary)!important;padding:8px 12px!important}`,
     `.rt-dock.rt-embedded{border-radius:16px!important;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,0.2))!important;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base))!important;overflow:hidden!important;box-shadow:0 2px 12px -2px rgba(0,0,0,0.04)!important}`,
     `.rt-head,.rt-tabs,.rt-toolbar,.rt-foot{background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base))!important;border-color:var(--dsw-alias-border-l1,rgba(128,128,128,0.14))!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page-head,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-strip,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page .dshpp-card,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .rt-dock.rt-embedded,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh-ghub-sidebar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh-ghub-main{background:rgba(24,25,30,0.68)!important;backdrop-filter:blur(24px) saturate(160%)!important;-webkit-backdrop-filter:blur(24px) saturate(160%)!important;border:1px solid rgba(255,255,255,0.09)!important;box-shadow:0 12px 32px -8px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.10)!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page-head,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-strip,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page .dshpp-card,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .rt-dock.rt-embedded,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dsh-ghub-sidebar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dsh-ghub-main{background:rgba(255,255,255,0.82)!important;backdrop-filter:blur(24px) saturate(180%)!important;-webkit-backdrop-filter:blur(24px) saturate(180%)!important;border:1px solid rgba(15,23,42,0.08)!important;box-shadow:0 10px 26px -6px rgba(15,23,42,0.06),inset 0 1px 0 #FFFFFF!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page-head,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-strip,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page .dshpp-card,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .rt-dock.rt-embedded,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh-ghub-sidebar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh-ghub-main{background:#23283a!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.09)!important;box-shadow:0 8px 24px -8px rgba(0,0,0,0.36),inset 0 1px 0 rgba(255,255,255,0.08)!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dshpp-page-head,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dshpp-strip,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dshpp-page .dshpp-card,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .rt-dock.rt-embedded,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh-ghub-sidebar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh-ghub-main,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page-head,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-strip,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page .dshpp-card,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .rt-dock.rt-embedded,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dsh-ghub-sidebar,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"].light .dsh-ghub-main{background:#f5f5f7!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(15,23,42,0.08)!important;box-shadow:0 8px 20px -6px rgba(15,23,42,0.05),inset 0 1px 0 #FFFFFF!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page-head,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-strip,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page .dshpp-card,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page section.dshpp-panel,body[data-dsh-theme-id="${PRESET2_ID}"] .rt-dock.rt-embedded,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-sidebar,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-main{background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;border:1px solid rgba(255,255,255,0.75)!important;box-shadow:${elevatedShadow}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page-tabs,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page .dshpp-hero,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-layout-details,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page details:not(.dshpp-fold-inline),body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page input:not([type="checkbox"]):not([type="radio"]),body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page select,body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page textarea,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-timeline,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-input,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-select,body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-textarea{background-color:#DCDCE0!important;background-image:${recessedBg}!important;border:1px solid rgba(255,255,255,0.55)!important;box-shadow:${recessedShadow}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .dshpp-page-tabs button[aria-selected="true"],body[data-dsh-theme-id="${PRESET2_ID}"] .dsh-ghub-room-btn[data-active="true"]{background-color:#FFFFFF!important;background-image:none!important;border:1.5px solid #FF6A2B!important;box-shadow:0 2px 8px rgba(255,106,43,0.14)!important;color:#1F2329!important}`,
@@ -592,18 +619,35 @@ export function buildPreset2Css(): string {
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh-preset-oval-scrollbar:hover .dsh-preset-oval-thumb,body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh-preset-oval-thumb:hover{background-color:#757880!important;background-image:linear-gradient(180deg,#a0a3ab 0%,#72757e 52%,#5a5d65 100%)!important;border-color:rgba(255,255,255,0.9)!important;box-shadow:0 3px 7px rgba(0,0,0,0.24),inset 0 1px 1.5px #ffffff!important}`,
     `.dsh-preset-oval-thumb:active{cursor:grabbing!important}`,
     `.cubgiG_itemDesc{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}`,
-    `[data-testid^="workspace-group-room-"]:hover .YDXeBa_rowResting,[data-testid^="workspace-group-room-"] .dsh-sidebar-group-stats{display:inline-flex!important;pointer-events:auto!important}`,
+    `.hHd-Xa_root:not(.hHd-Xa_collapsed) [data-testid^="workspace-group-room-"]:hover .YDXeBa_rowResting,.hHd-Xa_root:not(.hHd-Xa_collapsed) [data-testid^="workspace-group-room-"] .dsh-sidebar-group-stats{display:inline-flex!important;pointer-events:auto!important}`,
+    `.hHd-Xa_root.hHd-Xa_collapsed .dsh-sidebar-group-stats{display:none!important}`,
 
-    // 10b. rc.3 alignment: suppress rc.3-native decorations the rc.1 UI never had
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_brand,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_brand{display:none!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .pXSMma_previewBadge,body[data-dsh-theme-id="${PRESET2_ID}"] .pXSMma_previewBadge{display:none!important}`,
-
-    // 10c. rc.1 alignment: 新会话 button shares the top row with the sidebar toggle.
-    // transform moves it without touching layout flow (collapse-safe); the row is
-    // pointer-transparent so the toggle beneath stays clickable.
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow{transform:translateY(-44px)!important;pointer-events:none!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSession,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:calc(100% - 44px)!important;max-width:calc(100% - 44px)!important;flex:0 0 auto!important;pointer-events:auto!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSessionShortcut,body[data-dsh-theme-id="${PRESET2_ID}"] .hHd-Xa_newSessionRow .hHd-Xa_newSessionShortcut{display:none!important}`,
+    // 10b. Universal Sidebar Top Row Size, Alignment & Multi-Theme Consistency
+    // Applies across ALL themes (preset-1, preset-2, preset-3, light, dark, system)
+    `.hHd-Xa_brand,.pXSMma_previewBadge,.hHd-Xa_newSessionRow .hHd-Xa_newSessionShortcut{display:none!important}`,
+    // Expanded sidebar: .hHd-Xa_newSession and .hHd-Xa_toggle share exact 36px height and identical vertical center (centerY = 28px)
+    `.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_logoRow{height:44px!important;min-height:44px!important;max-height:44px!important;padding:4px 4px!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;box-sizing:border-box!important}`,
+    `.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_logoRow > .hHd-Xa_toggle{width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;margin:0!important;border-radius:9999px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 36px!important;box-sizing:border-box!important}`,
+    `.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSessionRow{height:36px!important;min-height:36px!important;max-height:36px!important;margin:-40px 4px 8px 4px!important;padding:0!important;transform:none!important;display:flex!important;align-items:center!important;pointer-events:none!important;position:relative!important;z-index:2!important;box-sizing:border-box!important}`,
+    `.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:calc(100% - 44px)!important;max-width:calc(100% - 44px)!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0 14px!important;margin:0!important;border-radius:9999px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;pointer-events:auto!important;box-sizing:border-box!important}`,
+    // Collapsed sidebar: both buttons stack vertically as 36x36 circles with identical horizontal center (centerX = 28px)
+    `.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_logoRow{width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;margin:4px auto 8px auto!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}`,
+    `.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_newSessionRow{width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;margin:0 auto 8px auto!important;transform:none!important;pointer-events:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}`,
+    `.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_logoRow > .hHd-Xa_toggle,.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;margin:0!important;border-radius:9999px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 36px!important;box-sizing:border-box!important}`,
+    // Consistent 16x16 SVG icon size and alignment inside both .hHd-Xa_newSession and .hHd-Xa_toggle in both expanded and collapsed modes
+    `.hHd-Xa_logoRow > .hHd-Xa_toggle .hHd-Xa_railMark{display:none!important}`,
+    `.hHd-Xa_logoRow > .hHd-Xa_toggle .hHd-Xa_panelIcon{display:inline-flex!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;flex:0 0 16px!important;align-items:center!important;justify-content:center!important}`,
+    `.hHd-Xa_logoRow > .hHd-Xa_toggle svg,.hHd-Xa_newSession svg,.hHd-Xa_newSession .hHd-Xa_newSessionContent > svg{width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;min-height:16px!important;max-height:16px!important;flex:0 0 16px!important;display:block!important}`,
+    `.hHd-Xa_newSession .hHd-Xa_newSessionLabelMask{display:inline-flex!important;align-items:center!important;justify-content:center!important;height:100%!important;line-height:1!important;margin:0!important;padding:0!important;mask-image:none!important;-webkit-mask-image:none!important}`,
+    `.hHd-Xa_newSession .hHd-Xa_newSessionContent{display:inline-flex!important;align-items:center!important;justify-content:center!important;height:100%!important;gap:8px!important;line-height:1!important;margin:0!important;padding:0!important}`,
+    `.hHd-Xa_newSession .hHd-Xa_newSessionLabel{display:inline-flex!important;align-items:center!important;height:16px!important;line-height:16px!important;margin:0!important;padding:0!important}`,
+    `.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_newSession .hHd-Xa_newSessionContent{gap:0!important}`,
+    // Stock Light & Preset 3 consistent button surface for .hHd-Xa_newSession and .hHd-Xa_toggle
+    `body:not([data-ds-dark-theme]):not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_newSession,body:not([data-ds-dark-theme]):not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_logoRow > .hHd-Xa_toggle{background-color:#ffffff!important;background-image:none!important;border:1px solid rgba(15,23,42,0.10)!important;border-radius:9999px!important;color:var(--dsw-alias-label-primary,#1f2329)!important;box-shadow:0 1px 3px rgba(15,23,42,0.05)!important}`,
+    `body:not([data-ds-dark-theme]):not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_newSession:hover,body:not([data-ds-dark-theme]):not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_logoRow > .hHd-Xa_toggle:hover{background-color:#f8fafc!important;border-color:rgba(15,23,42,0.16)!important;box-shadow:0 2px 5px rgba(15,23,42,0.08)!important}`,
+    // Stock Dark consistent button surface for .hHd-Xa_newSession and .hHd-Xa_toggle
+    `body[data-ds-dark-theme]:not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_newSession,body[data-ds-dark-theme]:not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_logoRow > .hHd-Xa_toggle{background-color:rgba(255,255,255,0.06)!important;background-image:none!important;border:1px solid rgba(255,255,255,0.10)!important;border-radius:9999px!important;color:var(--dsw-alias-label-primary,#f1f5f9)!important;box-shadow:0 2px 6px -1px rgba(0,0,0,0.24)!important}`,
+    `body[data-ds-dark-theme]:not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_newSession:hover,body[data-ds-dark-theme]:not([data-dsh-theme-id="${LUMINEX_PRESET_ID}"]):not([data-dsh-theme-id="${PRESET2_ID}"]) .hHd-Xa_logoRow > .hHd-Xa_toggle:hover{background-color:rgba(255,255,255,0.10)!important;border-color:rgba(255,255,255,0.16)!important}`,
 
     // 11. Universal Theme-Adaptive Floating Explanation Tooltip (#dsh-themed-tooltip-card & [role="tooltip"])
     `#dsh-themed-tooltip-card{position:fixed!important;left:0;top:0;z-index:2147483646!important;pointer-events:none!important;max-width:316px!important;min-width:168px!important;padding:10px 13px!important;border-radius:14px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;gap:5px!important;opacity:0;visibility:hidden;transform:translate3d(0,4px,0) scale(0.98);transition:opacity .14s cubic-bezier(.22,1,.36,1),transform .14s cubic-bezier(.22,1,.36,1),visibility .14s ease!important;font-family:var(--dsw-alias-font-sans,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)!important;background-color:#ffffff!important;background-image:linear-gradient(145deg,#ffffff 0%,#f8fafc 100%)!important;border:1px solid rgba(15,23,42,0.11)!important;box-shadow:0 12px 28px -6px rgba(15,23,42,0.14),0 4px 10px -2px rgba(15,23,42,0.06),inset 0 1px 0 #ffffff!important;color:#0f172a!important}`,
@@ -662,7 +706,9 @@ export function buildPreset2Css(): string {
 export function buildLuminexCanvasRuntimeCode(): string {
   return `syncDshLuminexBackground(themeId) {
 			if (typeof document === "undefined" || !document.body) return;
-			document.body.setAttribute("data-dsh-theme-id", themeId);
+			if (document.body.getAttribute("data-dsh-theme-id") !== themeId) {
+				document.body.setAttribute("data-dsh-theme-id", themeId);
+			}
 			const existingCanvas = document.getElementById("dsh-luminex-bg-canvas");
 			if (existingCanvas) existingCanvas.remove();
 
@@ -2370,21 +2416,47 @@ export function buildLuminexCanvasRuntimeCode(): string {
 					}, autoHideMs);
 				};
 
-				document.addEventListener("pointerover", (e) => {
-					showTooltipForTarget(e.target);
-				}, true);
+				let hoverRaf = 0;
+				let pendingHoverTarget = null;
 
-				document.addEventListener("pointermove", (e) => {
-					if (currentAnchor && (!currentAnchor.isConnected || !currentAnchor.contains(e.target))) {
-						showTooltipForTarget(e.target);
-					} else if (!currentAnchor) {
-						showTooltipForTarget(e.target);
+				document.addEventListener("pointerover", (e) => {
+					if (e.buttons !== 0) return;
+					const target = e.target;
+					if (currentAnchor && currentAnchor.isConnected && target instanceof Node && currentAnchor.contains(target)) {
+						return;
+					}
+					pendingHoverTarget = target;
+					if (!hoverRaf) {
+						hoverRaf = requestAnimationFrame(() => {
+							hoverRaf = 0;
+							const nextTarget = pendingHoverTarget;
+							pendingHoverTarget = null;
+							if (nextTarget) showTooltipForTarget(nextTarget);
+						});
+					}
+				}, { passive: true, capture: true });
+
+				document.addEventListener("pointerout", (e) => {
+					if (!currentAnchor) return;
+					const rel = e.relatedTarget;
+					if (!rel || !(rel instanceof Node) || !currentAnchor.contains(rel)) {
+						if (hoverRaf) {
+							cancelAnimationFrame(hoverRaf);
+							hoverRaf = 0;
+						}
+						pendingHoverTarget = null;
+						hideTooltip();
 					}
 				}, { passive: true, capture: true });
 
 				document.addEventListener("pointerdown", () => {
+					if (hoverRaf) {
+						cancelAnimationFrame(hoverRaf);
+						hoverRaf = 0;
+					}
+					pendingHoverTarget = null;
 					hideTooltip();
-				}, true);
+				}, { passive: true, capture: true });
 
 				document.addEventListener("wheel", () => {
 					hideTooltip();
@@ -2401,33 +2473,39 @@ export function buildLuminexCanvasRuntimeCode(): string {
 
 			const applySubmodeTokens = (mode) => {
 				if (document.body.getAttribute("data-dsh-theme-id") !== "${LUMINEX_PRESET_ID}") {
-					document.body.removeAttribute("data-dsh-preset1-mode");
-					document.body.style.removeProperty("--dsh-cpt-t");
-					if (document.body.getAttribute("data-dsh-theme-id") === "${PRESET2_ID}") {
-						document.documentElement.style.colorScheme = "light";
-						document.body.removeAttribute("data-ds-dark-theme");
+					if (document.body.hasAttribute("data-dsh-preset1-mode")) {
+						document.body.removeAttribute("data-dsh-preset1-mode");
+					}
+					if (document.body.getAttribute("data-dsh-theme-id") === "${PRESET2_ID}" || document.body.getAttribute("data-dsh-theme-id") === "preset-3") {
+						if (document.documentElement.style.colorScheme !== "light") {
+							document.documentElement.style.colorScheme = "light";
+						}
+						if (document.body.hasAttribute("data-ds-dark-theme")) {
+							document.body.removeAttribute("data-ds-dark-theme");
+						}
 					}
 					return;
 				}
-				document.body.setAttribute("data-dsh-preset1-mode", mode);
-				document.documentElement.style.colorScheme = mode;
-				if (mode === "dark") {
-					document.body.setAttribute("data-ds-dark-theme", "");
-				} else {
-					document.body.removeAttribute("data-ds-dark-theme");
+				if (document.body.getAttribute("data-dsh-preset1-mode") !== mode) {
+					document.body.setAttribute("data-dsh-preset1-mode", mode);
+				}
+				if (document.documentElement.style.colorScheme !== mode) {
+					document.documentElement.style.colorScheme = mode;
+				}
+				const wantDark = mode === "dark";
+				if (document.body.hasAttribute("data-ds-dark-theme") !== wantDark) {
+					document.body.toggleAttribute("data-ds-dark-theme", wantDark);
 				}
 			};
 
 			if (themeId !== "${LUMINEX_PRESET_ID}") {
 				applySubmodeTokens("light");
-				const existingWidget = document.getElementById("dsh-corner-pull-toggle");
-				if (existingWidget) existingWidget.remove();
 				return;
 			}
 
-			let savedMode = "dark";
+			let savedMode = "light";
 			try {
-				const raw = localStorage.getItem("dsh_preset1_submode_v2");
+				const raw = localStorage.getItem("dsh_preset1_submode_v3");
 				if (raw === "light" || raw === "dark") savedMode = raw;
 			} catch (_e) {}
 			applySubmodeTokens(savedMode);
@@ -2436,6 +2514,7 @@ export function buildLuminexCanvasRuntimeCode(): string {
 				if (nextMode !== "light" && nextMode !== "dark") return;
 				savedMode = nextMode;
 				try {
+					localStorage.setItem("dsh_preset1_submode_v3", nextMode);
 					localStorage.setItem("dsh_preset1_submode_v2", nextMode);
 					localStorage.setItem("dsh_preset1_submode", nextMode);
 				} catch (_e) {}
@@ -2448,6 +2527,28 @@ export function buildLuminexCanvasRuntimeCode(): string {
 				} catch (_e) {}
 			};
 
+			const syncCornerAnchor = () => {
+				try {
+					const w = document.getElementById("dsh-corner-pull-toggle");
+					const canvas = document.querySelector(".wSkVaW_scrollBody");
+					const bodyEl = document.querySelector(".wSkVaW_body");
+					if (!w || !canvas || !bodyEl) return;
+					const cr = canvas.getBoundingClientRect();
+					const br = bodyEl.getBoundingClientRect();
+					// Straddle the conversation canvas top-right corner with the
+					// groove centerline EXACTLY on the corner contour (scale 0.72 →
+					// radius 95 = canvas corner radius, concentric — no tilt), and
+					// a thicker 47px-visual track (local 65.3 ≈ 47 / 0.72).
+					w.style.top = ((cr.top - br.top) - 73) + "px";
+					w.style.right = ((br.right - cr.right) - 73) + "px";
+					w.style.transform = "scale(0.72)";
+					w.style.transformOrigin = "72px 168px";
+				} catch (_e) {}
+			};
+			if (!globalThis.__dshCornerSyncTimer) {
+				globalThis.__dshCornerSyncTimer = setInterval(syncCornerAnchor, 1000);
+				window.addEventListener("resize", syncCornerAnchor);
+			}
 			const ensureCornerWidget = () => {
 				if (document.body.getAttribute("data-dsh-theme-id") !== "${LUMINEX_PRESET_ID}") return;
 				const host = document.querySelector(".wSkVaW_body");
@@ -2486,9 +2587,9 @@ export function buildLuminexCanvasRuntimeCode(): string {
 								</linearGradient>
 							</defs>
 							<!-- Bottom-right 1px subtle catch-light lip + 3D Recessed Carved Groove -->
-							<path class="dsh_cpt_groove_rim" d="M 73.5 37.5 A 132 132 0 0 1 205.5 169.5" stroke="rgba(255, 255, 255, 0.06)" stroke-width="47" stroke-linecap="round"/>
-							<path class="dsh_cpt_groove_bg dsh_cpt_track_hit" d="M 72 36 A 132 132 0 0 1 204 168" stroke="rgba(24, 27, 39, 0.88)" stroke-width="47" stroke-linecap="round"/>
-							<path class="dsh_cpt_trail_glow dsh_cpt_trail_dark" d="M 72 36 A 132 132 0 0 1 204 168" stroke="url(#cptPurpleTrail)" stroke-width="22" stroke-linecap="round" filter="url(#cptGrooveBlur)"/>
+							<path class="dsh_cpt_groove_rim" d="M 73.5 37.5 A 132 132 0 0 1 205.5 169.5" stroke="rgba(255, 255, 255, 0.06)" stroke-width="65.3" stroke-linecap="round"/>
+							<path class="dsh_cpt_groove_bg dsh_cpt_track_hit" d="M 72 36 A 132 132 0 0 1 204 168" stroke="rgba(24, 27, 39, 0.88)" stroke-width="65.3" stroke-linecap="round"/>
+							<path class="dsh_cpt_trail_glow dsh_cpt_trail_dark" d="M 72 36 A 132 132 0 0 1 204 168" stroke="url(#cptPurpleTrail)" stroke-width="30.6" stroke-linecap="round" filter="url(#cptGrooveBlur)"/>
 						</svg>
 						<button type="button" class="dsh_cpt_capsule" aria-label="Pull to toggle Preset 1 Dark/Light studio mode" title="Drag or click to toggle Liquid Glass Dark / Daylight mode">
 							<span class="dsh_cpt_glint" aria-hidden="true"></span>
@@ -2517,30 +2618,30 @@ export function buildLuminexCanvasRuntimeCode(): string {
 					const CX = 72;
 					const CY = 168;
 					const R = 132;
+					const CAP_SCALE = 1.1633; // capsule visual size stays ≈57×40 at the 0.72 groove scale
 					const DEG0 = -90;
 					const DEG1 = 0;
 
 					let curT = savedMode === "light" ? 0 : 1;
 					let animFrame = 0;
 
+					if (capsule) {
+						capsule.style.left = CX + "px";
+						capsule.style.top = CY + "px";
+					}
+
 					const renderAt = (tVal, pullStretch = 0) => {
 						const clamped = Math.max(-0.08, Math.min(1.08, tVal));
 						const normT = Math.max(0, Math.min(1, clamped));
 						const deg = DEG0 + clamped * (DEG1 - DEG0);
 						const rad = deg * Math.PI / 180;
-						const x = CX + R * Math.cos(rad);
-						const y = CY + R * Math.sin(rad);
+						const dx = R * Math.cos(rad);
+						const dy = R * Math.sin(rad);
 						const rotDeg = deg + 90;
-						const midSwell = Math.sin(normT * Math.PI) * 0.04;
-						const scaleX = 1 + midSwell + Math.abs(pullStretch) * 0.05;
-						const scaleY = 1 + midSwell * 0.6 - Math.abs(pullStretch) * 0.025;
-
-						document.body.style.setProperty("--dsh-cpt-t", normT.toFixed(3));
+						widget.style.setProperty("--dsh-cpt-t", normT.toFixed(3));
 
 						if (capsule) {
-							capsule.style.left = x.toFixed(2) + "px";
-							capsule.style.top = y.toFixed(2) + "px";
-							capsule.style.transform = \`rotate(\${rotDeg.toFixed(2)}deg) scale(\${scaleX.toFixed(3)}, \${scaleY.toFixed(3)})\`;
+							capsule.style.transform = \`translate3d(\${dx.toFixed(2)}px, \${dy.toFixed(2)}px, 0) rotate(\${rotDeg.toFixed(2)}deg) scale(\${CAP_SCALE.toFixed(3)}, \${CAP_SCALE.toFixed(3)})\`;
 						}
 						if (spoke) {
 							spoke.style.transform = \`rotate(\${(clamped * 180).toFixed(1)}deg)\`;
@@ -2595,8 +2696,11 @@ export function buildLuminexCanvasRuntimeCode(): string {
 
 					const pointerToT = (clientX, clientY) => {
 						const rect = svgEl.getBoundingClientRect();
-						const px = clientX - rect.left - CX;
-						const py = clientY - rect.top - CY;
+						// The widget is scaled — compensate so the angle maps to the
+						// true (scaled) arc center, not the unscaled local one.
+						const sc = rect.width / 240 || 1;
+						const px = clientX - rect.left - CX * sc;
+						const py = clientY - rect.top - CY * sc;
 						let deg = Math.atan2(py, px) * 180 / Math.PI;
 						if (deg > 90) deg -= 360;
 						const rawT = (deg - DEG0) / (DEG1 - DEG0);
@@ -2672,17 +2776,24 @@ export function buildLuminexCanvasRuntimeCode(): string {
 				} else if (widget.parentElement !== host) {
 					host.appendChild(widget);
 				}
+				syncCornerAnchor();
 			};
 
 			if (globalThis.__dshHarnessCornerWidget === true) ensureCornerWidget();
 			if (!globalThis.__dshCornerToggleObserver && typeof MutationObserver !== "undefined") {
+				let cornerObsRaf = 0;
 				const obs = new MutationObserver(() => {
 					if (globalThis.__dshHarnessCornerWidget !== true) return;
-					if (document.body.getAttribute("data-dsh-theme-id") === "${LUMINEX_PRESET_ID}") {
-						if (!document.getElementById("dsh-corner-pull-toggle")) {
-							ensureCornerWidget();
+					if (cornerObsRaf) return;
+					cornerObsRaf = requestAnimationFrame(() => {
+						cornerObsRaf = 0;
+						if (document.body.getAttribute("data-dsh-theme-id") === "${LUMINEX_PRESET_ID}") {
+							const w = document.getElementById("dsh-corner-pull-toggle");
+							if (!w || !w.isConnected) {
+								ensureCornerWidget();
+							}
 						}
-					}
+					});
 				});
 				obs.observe(document.body, { childList: true, subtree: true });
 				globalThis.__dshCornerToggleObserver = obs;

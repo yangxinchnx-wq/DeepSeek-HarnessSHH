@@ -38,7 +38,9 @@ const GATEWAY_PORT = 3082;
 const GATEWAY_BASE_URL = `http://127.0.0.1:${GATEWAY_PORT}`;
 const LOCAL_GATEWAY_KEY = 'dsh-local-gateway-key';
 
-const WORKSPACE_ROOT = path.resolve(process.cwd(), 'workspaces');
+const WORKSPACE_ROOT = process.env.DSH_WORKSPACE_ROOT
+  ? path.resolve(process.env.DSH_WORKSPACE_ROOT)
+  : path.join(os.homedir(), '.dsh', 'workspaces');
 const DEFAULT_WORKSPACE_DIR = path.join(WORKSPACE_ROOT, 'deepseek-harness', 'default-workspace');
 const SUPERAGENT_STATE_DIR = path.join(WORKSPACE_ROOT, 'deepseek-harness', 'superagent-state');
 const connectorStore = new SuperagentConnectorStore(SUPERAGENT_STATE_DIR);

@@ -115,7 +115,12 @@ export class SshCredentialVault {
   private readonly vaultFilePath: string;
   private readonly secret: Buffer;
 
-  constructor(vaultDir = path.resolve(process.cwd(), 'ssh'), customSecret?: Buffer) {
+  constructor(
+    vaultDir = process.env.DSH_SSH_VAULT_DIR
+      ? path.resolve(process.env.DSH_SSH_VAULT_DIR)
+      : path.join(os.homedir(), '.dsh', 'ssh'),
+    customSecret?: Buffer,
+  ) {
     fs.mkdirSync(vaultDir, { recursive: true });
     this.vaultFilePath = path.join(vaultDir, '.vault.enc');
     this.secret = customSecret ?? getVaultMasterSecret();

@@ -531,9 +531,50 @@ const FETCH_PROVIDER_DESCRIPTION = {
         );
         changed = true;
       }
-      if (changed) {
-        fs.writeFileSync(themeClientPath, code, 'utf8');
-      }
+    }
+    // Performance: strip universal *, :before, :after corner-shape superellipse & body * universal custom-property recalculation
+    if (code.includes('*,:before,:after{corner-shape:var(--dsw-corner-shape)}')) {
+      code = code.replace('*,:before,:after{corner-shape:var(--dsw-corner-shape)}', '');
+      changed = true;
+    }
+    if (code.includes('body,body *{--dsw-elevation-stroke:')) {
+      code = code.replace('body,body *{--dsw-elevation-stroke:', 'body{--dsw-elevation-stroke:');
+      changed = true;
+    }
+    if (code.includes('@supports not selector(::-webkit-scrollbar){body,body *{')) {
+      code = code.replace(
+        '@supports not selector(::-webkit-scrollbar){body,body *{',
+        '@supports not selector(::-webkit-scrollbar){body{',
+      );
+      changed = true;
+    }
+    // Persist preset-1/2/3 across adopt() when backend schema only accepts light/dark/system
+    const adoptOrig =
+      'this.preference=section.preference;this.fontSizes=fontSizes;this.fontFamilies=fontFamilies;this.publish()';
+    const adoptPatched =
+      'const savedPref=(()=>{try{const raw=typeof window!=="undefined"?window.localStorage?.getItem("dsh_harness_theme_choice"):null;if(!raw)return"preset-1";const ch=JSON.parse(raw);if(ch?.id)return ch.id}catch{}return section.preference})();this.preference=savedPref;this.fontSizes=fontSizes;this.fontFamilies=fontFamilies;this.publish()';
+    if (code.includes(adoptOrig)) {
+      code = code.replace(adoptOrig, adoptPatched);
+      changed = true;
+    }
+    const setThemeOrig =
+      'this.preference=id;if(isThemePreference(id))this.write(()=>this.host.set(THEME_PREFERENCE_FIELD,id));this.publish()';
+    const setThemePatched =
+      'this.preference=id;try{if(typeof window!=="undefined"&&window.localStorage){window.localStorage.setItem("dsh_harness_theme_choice",JSON.stringify({mode:String(id).startsWith("preset-")?"preset":"stock",id}))}}catch{}if(isThemePreference(id))this.write(()=>this.host.set(THEME_PREFERENCE_FIELD,id));this.publish()';
+    if (code.includes(setThemeOrig)) {
+      code = code.replace(setThemeOrig, setThemePatched);
+      changed = true;
+    }
+    const bootOrig =
+      'function bootstrapPreference(){if(typeof document===`undefined`)return DEFAULT_PREFERENCE;const preference=document.documentElement.dataset.dsThemeSource;return isThemePreference(preference)?preference:DEFAULT_PREFERENCE}';
+    const bootPatched =
+      'function bootstrapPreference(){if(typeof document===`undefined`)return DEFAULT_PREFERENCE;try{const raw=window.localStorage?.getItem("dsh_harness_theme_choice");if(!raw)return`preset-1`;const ch=JSON.parse(raw);if(typeof ch?.id===`string`&&ch.id.length>0)return ch.id}catch{}return`preset-1`}';
+    if (code.includes(bootOrig)) {
+      code = code.replace(bootOrig, bootPatched);
+      changed = true;
+    }
+    if (changed) {
+      fs.writeFileSync(themeClientPath, code, 'utf8');
     }
   }
 
@@ -1191,10 +1232,10 @@ function catalogNames(entries) {
   if (fs.existsSync(inspectorIndex)) {
     let code = fs.readFileSync(inspectorIndex, 'utf8');
     let modified = false;
-    if (code.includes('const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\nconst MAX_TOPIC_CODE_UNITS = 128;')) {
+    if (!code.includes('const SOURCE_FRAME_OVERHEAD_BYTES = 4096;')) {
       code = code.replace(
-        'const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\nconst MAX_TOPIC_CODE_UNITS = 128;',
         'const MAX_TOPIC_CODE_UNITS = 128;',
+        'const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\nconst MAX_TOPIC_CODE_UNITS = 128;',
       );
       modified = true;
     }
@@ -1217,6 +1258,9 @@ function maxStatePayloadBytes(maxFrameBytes) {
         'maxBytes: spec.maxSourceFrameBytes - 4096',
         'maxBytes: maxStatePayloadBytes(spec.maxSourceFrameBytes)',
       );
+      modified = true;
+    }
+    if (code.includes('export { Config, apply, inject, name, resolveInspectorOptions, startInspector };')) {
       code = code.replace(
         'export { Config, apply, inject, name, resolveInspectorOptions, startInspector };',
         'export { Config, MAX_TOPIC_CODE_UNITS, STATE_RECORD_OVERHEAD_BYTES, apply, inject, maxStatePayloadBytes, name, resolveInspectorOptions, startInspector };',
@@ -1232,10 +1276,10 @@ function maxStatePayloadBytes(maxFrameBytes) {
   if (fs.existsSync(inspectorClient)) {
     let code = fs.readFileSync(inspectorClient, 'utf8');
     let modified = false;
-    if (code.includes('const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\n\t\tconst STATE_RECORD_OVERHEAD_BYTES = 1024;')) {
+    if (!code.includes('const SOURCE_FRAME_OVERHEAD_BYTES = 4096;') && code.includes('const STATE_RECORD_OVERHEAD_BYTES = 1024;')) {
       code = code.replace(
-        'const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\n\t\tconst STATE_RECORD_OVERHEAD_BYTES = 1024;',
         'const STATE_RECORD_OVERHEAD_BYTES = 1024;',
+        'const SOURCE_FRAME_OVERHEAD_BYTES = 4096;\n\t\tconst STATE_RECORD_OVERHEAD_BYTES = 1024;',
       );
       modified = true;
     }
@@ -1375,6 +1419,13 @@ function maxStatePayloadBytes(maxFrameBytes) {
         );
         communityChanged = true;
       }
+      if (communityCode.includes('const version = readVersion(reader, aiBase, "dsh-agent-loop");')) {
+        communityCode = communityCode.replace(
+          'const version = readVersion(reader, aiBase, "dsh-agent-loop");',
+          'const version = readVersion(reader, aiBase, "dsh-agent-loop") || readVersion(reader, aiBase, "dsh-agent");',
+        );
+        communityChanged = true;
+      }
       if (communityChanged) {
         fs.writeFileSync(communityJsPath, communityCode, 'utf8');
       }
@@ -1510,6 +1561,12 @@ function maxStatePayloadBytes(maxFrameBytes) {
           'function isLayoutSoftPatch(patch) {\n  return isIdentityLayoutPatch(patch) || isApprovalSentencePatch(patch) || Boolean(patch?.softSettle) || Boolean(patch?.settleWhenAbsent) || patch?.id === 76;\n}',
         );
       }
+      if (!coreCode.includes('...nestedPkg(aiBase, "dsh-agent", "lib", "index.js")')) {
+        coreCode = coreCode.replace(
+          '    "agent-loop": allExisting([\n      ...nestedPkg(aiBase, "dsh-agent-loop", "lib", "index.js"),\n    ]),',
+          '    "agent-loop": allExisting([\n      ...nestedPkg(aiBase, "dsh-agent-loop", "lib", "index.js"),\n      ...nestedPkg(aiBase, "dsh-agent", "lib", "index.js"),\n    ]),',
+        );
+      }
       fs.writeFileSync(coreJsPath, coreCode, 'utf8');
     }
 
@@ -1600,6 +1657,14 @@ function maxStatePayloadBytes(maxFrameBytes) {
   }
 
   // =========================================================================
+  // 12f. Client Runtime Resilience Guards for 0.2.2-rc.3 Minified Bundles
+  //   - Fix 0: [session-controller] control stream failed: RemoteError: signal is aborted without reason
+  //   - Fix 1: [cordis-client-runner] syncing inspect providers failed: TypeError: ctx.remote.dynamicCordisRunner.syncInspectManifest is not a function
+  //   - Fix 2: Sidebar Session opening failed: Error: Session reference "..." is released
+  // =========================================================================
+  applyClientRuntimeResiliencePatches(nmScopeDir);
+
+  // =========================================================================
   // 13. dsh-harness-community official client plugin.
   // Replaces the legacy client string-patch layer: the ported UI blocks are
   // extracted from src (single source of truth), CSS-module class maps are
@@ -1607,6 +1672,162 @@ function maxStatePayloadBytes(maxFrameBytes) {
   // generated from luminex-theme.ts. Version-proof: no upstream code anchors.
   // =========================================================================
   buildHarnessClientPlugin(rootDir, nmScopeDir);
+}
+
+function applyClientRuntimeResiliencePatches(nmScopeDir: string): void {
+  // 1. dsh-api-gateway/lib/client.browser.js: treat stream abort errors as retryable carrier resets
+  //    instead of terminal RemoteError("gateway/internal", "signal is aborted without reason").
+  const gatewayBrowserPath = path.join(nmScopeDir, 'dsh-api-gateway/lib/client.browser.js');
+  if (fs.existsSync(gatewayBrowserPath)) {
+    let gwCode = fs.readFileSync(gatewayBrowserPath, 'utf8');
+    let gwChanged = false;
+    const minAnchor = 'if(!(error instanceof RemoteStreamCarrierError))throw terminalStreamFailure(error);';
+    const minReplace =
+      'if(!(error instanceof RemoteStreamCarrierError)){if(error&&(String(error.message||error).includes("signal is aborted")||String(error.message||error).includes("aborted without reason")||error.name==="AbortError"))error=new RemoteStreamCarrierError(error.message||"stream aborted",{cause:error});else throw terminalStreamFailure(error);}';
+    if (gwCode.includes(minAnchor)) {
+      gwCode = gwCode.replace(minAnchor, minReplace);
+      gwChanged = true;
+    }
+    if (gwChanged) {
+      fs.writeFileSync(gatewayBrowserPath, gwCode, 'utf8');
+    }
+  }
+
+  // 2. dsh-api-session-controller/lib/client.js:
+  //    - Suppress benign abort/disconnect noise on session control stream and auto-restart stream
+  //    - Make ClientSessionReference.release() idempotent
+  const sessionCtrlClientPath = path.join(nmScopeDir, 'dsh-api-session-controller/lib/client.js');
+  if (fs.existsSync(sessionCtrlClientPath)) {
+    let scCode = fs.readFileSync(sessionCtrlClientPath, 'utf8');
+    let scChanged = false;
+
+    const minFailedAnchor =
+      'failed:error=>{console.error(`[session-controller] control stream failed:`,error)}';
+    const minFailedPrev =
+      'failed:error=>{if(error&&(String(error.message||error).includes("signal is aborted")||String(error.message||error).includes("aborted without reason")||String(error.message||error).includes("Failed to fetch")||String(error.message||error).includes("NetworkError")||error.code==="gateway/cancelled")){setTimeout(()=>{try{if(connection.generation.getSnapshot()!==void 0)control.restart()}catch(_e){}},250);return}console.error(`[session-controller] control stream failed:`,error)}';
+    const minFailedReplace =
+      'failed:error=>{if(error&&(String(error.message||error).includes("signal is aborted")||String(error.message||error).includes("aborted without reason")||String(error.message||error).includes("Failed to fetch")||String(error.message||error).includes("NetworkError")||String(error.message||error).includes("is not a function")||String(error.message||error).includes("inactive context")||error.code==="gateway/cancelled")){setTimeout(()=>{try{if(connection.generation.getSnapshot()!==void 0)control.restart()}catch(_e){}},250);return}console.error(`[session-controller] control stream failed:`,error)}';
+    if (scCode.includes(minFailedAnchor)) {
+      scCode = scCode.replace(minFailedAnchor, minFailedReplace);
+      scChanged = true;
+    } else if (scCode.includes(minFailedPrev)) {
+      scCode = scCode.replace(minFailedPrev, minFailedReplace);
+      scChanged = true;
+    }
+
+    const minReleaseAnchor =
+      'release(){const reason=new Error(`Session reference "${this.sessionId}" is released`);';
+    const minReleaseReplace =
+      'release(){if(this.record===void 0&&this.releaseReference===void 0)return;const reason=new Error(`Session reference "${this.sessionId}" is released`);';
+    if (scCode.includes(minReleaseAnchor)) {
+      scCode = scCode.replace(minReleaseAnchor, minReleaseReplace);
+      scChanged = true;
+    }
+
+    if (scChanged) {
+      fs.writeFileSync(sessionCtrlClientPath, scCode, 'utf8');
+    }
+  }
+
+  // 3. dsh-cordis-client-runner/lib/client.js:
+  //    - Guard ctx.remote?.dynamicCordisRunner?.syncInspectManifest & resolveInspectQuery when not a function or inactive context
+  //    - Suppress transient/missing-method errors in syncing inspect providers catch handler
+  const cordisRunnerClientPath = path.join(nmScopeDir, 'dsh-cordis-client-runner/lib/client.js');
+  if (fs.existsSync(cordisRunnerClientPath)) {
+    let crCode = fs.readFileSync(cordisRunnerClientPath, 'utf8');
+    let crChanged = false;
+
+    const minSyncAnchor =
+      'sync:async providers=>{const answered=await ctx.remote.dynamicCordisRunner.syncInspectManifest(providers);if(!answered.ok)throw new Error(`${answered.error.code}: ${answered.error.message}`)},resolve:async(agentId,requestId,resolution)=>{const answered=await ctx.remote.dynamicCordisRunner.resolveInspectQuery(agentId,requestId,resolution);if(!answered.ok)throw new Error(`${answered.error.code}: ${answered.error.message}`)}';
+    const minSyncPrev =
+      'sync:async providers=>{const fn=ctx.remote?.dynamicCordisRunner?.syncInspectManifest;if(typeof fn!=="function")return;const answered=await fn.call(ctx.remote.dynamicCordisRunner,providers).catch(()=>null);if(!answered?.ok){const errMsg=`${answered?.error?.code??""}: ${answered?.error?.message??""}`;if(!answered||answered?.error?.code==="gateway/cancelled"||errMsg.includes("Failed to fetch")||errMsg.includes("NetworkError")||errMsg.includes("no active Connection")||errMsg.includes("aborted"))return;throw new Error(errMsg)}},resolve:async(agentId,requestId,resolution)=>{const fn=ctx.remote?.dynamicCordisRunner?.resolveInspectQuery;if(typeof fn!=="function")return;const answered=await fn.call(ctx.remote.dynamicCordisRunner,agentId,requestId,resolution).catch(()=>null);if(!answered?.ok){const errMsg=`${answered?.error?.code??""}: ${answered?.error?.message??""}`;if(!answered||answered?.error?.code==="gateway/cancelled"||errMsg.includes("aborted"))return;throw new Error(errMsg)}}';
+    const minSyncReplace =
+      'sync:async providers=>{let rem;try{rem=ctx.remote}catch{return}const fn=rem?.dynamicCordisRunner?.syncInspectManifest;if(typeof fn!=="function")return;const answered=await fn.call(rem.dynamicCordisRunner,providers).catch(()=>null);if(!answered?.ok){const errMsg=`${answered?.error?.code??""}: ${answered?.error?.message??""}`;if(!answered||answered?.error?.code==="gateway/cancelled"||errMsg.includes("Failed to fetch")||errMsg.includes("NetworkError")||errMsg.includes("no active Connection")||errMsg.includes("inactive context")||errMsg.includes("aborted"))return;throw new Error(errMsg)}},resolve:async(agentId,requestId,resolution)=>{let rem;try{rem=ctx.remote}catch{return}const fn=rem?.dynamicCordisRunner?.resolveInspectQuery;if(typeof fn!=="function")return;const answered=await fn.call(rem.dynamicCordisRunner,agentId,requestId,resolution).catch(()=>null);if(!answered?.ok){const errMsg=`${answered?.error?.code??""}: ${answered?.error?.message??""}`;if(!answered||answered?.error?.code==="gateway/cancelled"||errMsg.includes("inactive context")||errMsg.includes("aborted"))return;throw new Error(errMsg)}}';
+    if (crCode.includes(minSyncAnchor)) {
+      crCode = crCode.replace(minSyncAnchor, minSyncReplace);
+      crChanged = true;
+    } else if (crCode.includes(minSyncPrev)) {
+      crCode = crCode.replace(minSyncPrev, minSyncReplace);
+      crChanged = true;
+    }
+
+    const minCatchAnchor =
+      '.catch(error=>{console.error(`[cordis-client-runner] syncing inspect providers failed:`,error)})';
+    const minCatchPrev =
+      '.catch(error=>{if(error&&(String(error.message||error).includes("syncInspectManifest")||String(error.message||error).includes("Failed to fetch")||String(error.message||error).includes("NetworkError")||String(error.message||error).includes("no active Connection")||String(error.message||error).includes("aborted")))return;console.error(`[cordis-client-runner] syncing inspect providers failed:`,error)})';
+    const minCatchReplace =
+      '.catch(error=>{if(error&&(String(error.message||error).includes("syncInspectManifest")||String(error.message||error).includes("inactive context")||String(error.message||error).includes("Failed to fetch")||String(error.message||error).includes("NetworkError")||String(error.message||error).includes("no active Connection")||String(error.message||error).includes("aborted")))return;console.error(`[cordis-client-runner] syncing inspect providers failed:`,error)})';
+    if (crCode.includes(minCatchAnchor)) {
+      crCode = crCode.replace(minCatchAnchor, minCatchReplace);
+      crChanged = true;
+    } else if (crCode.includes(minCatchPrev)) {
+      crCode = crCode.replace(minCatchPrev, minCatchReplace);
+      crChanged = true;
+    }
+
+    if (crChanged) {
+      fs.writeFileSync(cordisRunnerClientPath, crCode, 'utf8');
+    }
+  }
+
+  // 4. dsh-client-ui-sidebar-right/lib/client.js:
+  //    - Suppress "Sidebar Session opening failed: Error: Session reference '...' is released"
+  //      when SidebarSessionView is retired/disposed before ready resolves.
+  const sidebarRightClientPath = path.join(nmScopeDir, 'dsh-client-ui-sidebar-right/lib/client.js');
+  if (fs.existsSync(sidebarRightClientPath)) {
+    let srCode = fs.readFileSync(sidebarRightClientPath, 'utf8');
+    const minReadyAnchor =
+      'this.reference.ready.catch(error=>{console.error(`Sidebar Session opening failed:`,error)})';
+    const minReadyReplace =
+      'this.reference.ready.catch(error=>{if(this.retired||this.disposed||String(error?.message??error).includes("is released")||String(error?.message??error).includes("aborted"))return;console.error(`Sidebar Session opening failed:`,error)})';
+    if (srCode.includes(minReadyAnchor)) {
+      srCode = srCode.replace(minReadyAnchor, minReadyReplace);
+      fs.writeFileSync(sidebarRightClientPath, srCode, 'utf8');
+    }
+  }
+
+  // 5. dsh-client-ui-cordis/lib/client.js:
+  //    - Guard inventory() and createCordisInventory error callback against transient abort/connection errors
+  const uiCordisClientPath = path.join(nmScopeDir, 'dsh-client-ui-cordis/lib/client.js');
+  if (fs.existsSync(uiCordisClientPath)) {
+    let ucCode = fs.readFileSync(uiCordisClientPath, 'utf8');
+    const minInvAnchor =
+      'inventory:async()=>{const answered=await ctx.remote.dynamicCordisRunner.inventory();if(!answered.ok)throw new Error(`${answered.error.code}: ${answered.error.message}`);return answered.value}};const inventory=createCordisInventory(port,error=>{console.error(`[ui-cordis] reading the Cordis inventory failed:`,error)});';
+    const minInvReplace =
+      'inventory:async()=>{const fn=ctx.remote?.dynamicCordisRunner?.inventory;if(typeof fn!=="function")return[];const answered=await fn.call(ctx.remote.dynamicCordisRunner).catch(()=>null);if(!answered?.ok){const errMsg=`${answered?.error?.code??""}: ${answered?.error?.message??""}`;if(!answered||errMsg.includes("Failed to fetch")||errMsg.includes("NetworkError")||errMsg.includes("gateway/cancelled")||errMsg.includes("aborted")||errMsg.includes("no active Connection"))return[];throw new Error(errMsg)}return Array.isArray(answered.value)?answered.value:[]}};const inventory=createCordisInventory(port,error=>{const msg=String(error?.message||error||"");if(msg.includes("Failed to fetch")||msg.includes("NetworkError")||msg.includes("gateway/cancelled")||msg.includes("aborted")||msg.includes("no active Connection")||msg.includes("dynamicCordisRunner"))return;console.error(`[ui-cordis] reading the Cordis inventory failed:`,error)});';
+    if (ucCode.includes(minInvAnchor)) {
+      ucCode = ucCode.replace(minInvAnchor, minInvReplace);
+      fs.writeFileSync(uiCordisClientPath, ucCode, 'utf8');
+    }
+  }
+
+  // 6. dsh-client-ui-session/lib/client.js:
+  //    - Honor globalThis.__dshMainRetainedSessionId and expose globalThis.__dshPublishMain in minified rc.3
+  const uiSessionClientPath = path.join(nmScopeDir, 'dsh-client-ui-session/lib/client.js');
+  if (fs.existsSync(uiSessionClientPath)) {
+    let usCode = fs.readFileSync(uiSessionClientPath, 'utf8');
+    const minPubAnchor =
+      'publishMain(){if(!this.active)return;const byId=this.sessions.list.getSnapshot().byId;const currentId=this.current.value.key;const nextId=currentId!==void 0&&(this.sessions.retainInfo(currentId).getSnapshot().retainedBy.mainView??0)>0?currentId:Object.values(byId).find(candidate=>(candidate.retainedBy.mainView??0)>0)?.id;';
+    const minPubReplace =
+      'publishMain(){globalThis.__dshPublishMain=()=>this.publishMain();if(!this.active)return;const byId=this.sessions.list.getSnapshot().byId;const currentId=this.current.value.key;const retainedId=globalThis.__dshMainRetainedSessionId;const isClientMainRetained=id=>id!==void 0&&(this.sessions.retainInfo(id).getSnapshot().retainedBy.mainView??0)>0;const nextId=isClientMainRetained(currentId)?currentId:isClientMainRetained(retainedId)?retainedId:Object.values(byId).find(candidate=>isClientMainRetained(candidate.id)||(candidate.retainedBy.mainView??0)>0)?.id;';
+    if (usCode.includes(minPubAnchor)) {
+      usCode = usCode.replace(minPubAnchor, minPubReplace);
+      fs.writeFileSync(uiSessionClientPath, usCode, 'utf8');
+    }
+  }
+
+  // 7. dsh-client-ui-layout/lib/client.js:
+  //    - Eliminate synchronous getComputedStyle(body).backgroundColor reflow during ThemePresenter.apply
+  const uiLayoutClientPath = path.join(nmScopeDir, 'dsh-client-ui-layout/lib/client.js');
+  if (fs.existsSync(uiLayoutClientPath)) {
+    let ulCode = fs.readFileSync(uiLayoutClientPath, 'utf8');
+    const syncReflowAnchor = 'this.themeColorMeta.content=getComputedStyle(body).backgroundColor;';
+    const syncReflowReplace = 'this.themeColorMeta.content=scheme==="dark"?"#151517":"#ffffff";';
+    if (ulCode.includes(syncReflowAnchor)) {
+      ulCode = ulCode.replace(syncReflowAnchor, syncReflowReplace);
+      fs.writeFileSync(uiLayoutClientPath, ulCode, 'utf8');
+    }
+  }
 }
 
 function extractTemplateBlock(source: string, startLine: number, hardEndLine: number): string {
@@ -1663,12 +1884,12 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
     extractTemplateBlock(sshSource, 56, sshSource.split('\n').length),
   );
   const tabsBlock = evalTemplate(
-    extractTemplateBlock(patchesSource, 35, 585),
+    extractTemplateBlock(patchesSource, 50, 601),
     { SSH_CLIENT_RUNTIME_COMPONENTS: sshBlock },
   );
-  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 1983, 2637));
-  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3848, 4578));
-  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1075, 1585));
+  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 1999, 2651));
+  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3862, 4591));
+  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1091, 1601));
 
   // Custom tabs CSS (BROWSER_TAB_CSS_APPEND + SSH_CLIENT_CSS_APPEND) — quoted
   // string-concat consts, evaluated as JS expressions.
@@ -1684,7 +1905,7 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
   const sshCss = evalJsExpression(sshCssExpr);
   const browserCssExpr = patchesSource
     .split('\n')
-    .slice(10, 33)
+    .slice(10, 48)
     .join('\n')
     .replace(/^const BROWSER_TAB_CSS_APPEND\s*=/, '')
     .trimEnd()

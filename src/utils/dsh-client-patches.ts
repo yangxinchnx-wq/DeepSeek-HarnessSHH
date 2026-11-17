@@ -16,7 +16,7 @@ const BROWSER_TAB_CSS_APPEND =
   '.wSkVaW_browserTabsBar{display:flex;align-items:center;gap:6px;min-width:0;flex:1;height:34px;overflow-x:hidden;scrollbar-width:none;padding:0;-webkit-app-region:no-drag;position:relative;scroll-behavior:auto}' +
   '.wSkVaW_browserTabsBar[data-overflow=true]{overflow-x:auto}' +
   '.wSkVaW_browserTabsBar::-webkit-scrollbar{display:none}' +
-  '.wSkVaW_browserTab{display:inline-flex;align-items:center;gap:8px;height:34px;width:168px;min-width:168px;max-width:168px;flex:0 0 168px;padding:0 8px 0 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.16));background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);color:var(--dsw-alias-label-secondary);font-size:13px;line-height:18px;cursor:pointer;user-select:none;transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease;position:relative;box-sizing:border-box;touch-action:none}' +
+  '.wSkVaW_browserTab{display:inline-flex;align-items:center;gap:8px;height:34px;width:168px;min-width:168px;max-width:168px;flex:0 0 168px;padding:0 8px 0 10px;border-radius:9999px;border:1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.16));background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);color:var(--dsw-alias-label-secondary);font-size:13px;line-height:18px;cursor:pointer;user-select:none;transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease;position:relative;box-sizing:border-box;touch-action:none}' +
   '.wSkVaW_browserTab:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}' +
   '.wSkVaW_browserTabActive{background:#FFFFFF;border-color:#FF6A2B;border-width:1.5px;color:#1F2329;font-weight:600;box-shadow:0 2px 6px rgba(255,106,43,.12)}' +
   '.wSkVaW_browserTabDragging{z-index:10;cursor:grabbing!important;box-shadow:0 4px 12px rgba(0,0,0,.16)!important;transition:none!important;background:var(--dsw-alias-bg-base)!important}' +
@@ -28,8 +28,23 @@ const BROWSER_TAB_CSS_APPEND =
   '.wSkVaW_browserTabClose{width:18px;height:18px;border-radius:4px;border:none;background:transparent;color:var(--dsw-alias-label-tertiary);display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex:none;opacity:.65;transition:opacity .12s ease,background .12s ease,color .12s ease}' +
   '.wSkVaW_browserTab:hover .wSkVaW_browserTabClose,.wSkVaW_browserTabActive .wSkVaW_browserTabClose{opacity:1}' +
   '.wSkVaW_browserTabClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}' +
-  '.wSkVaW_browserTabAdd{width:30px;height:30px;border-radius:8px;border:1px dashed var(--dsw-alias-border-l2, rgba(128,128,128,.25));background:var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));color:var(--dsw-alias-label-secondary);display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex:0 0 30px;position:sticky;right:0;z-index:4;box-shadow:-6px 0 8px -4px var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));transition:background .14s ease,color .14s ease,border-color .14s ease}' +
+  '.wSkVaW_browserTabAdd{width:30px;height:30px;border-radius:9999px;border:1px dashed var(--dsw-alias-border-l2, rgba(128,128,128,.25));background:var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));color:var(--dsw-alias-label-secondary);display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex:0 0 30px;position:sticky;right:0;z-index:4;box-shadow:-6px 0 8px -4px var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));transition:background .14s ease,color .14s ease,border-color .14s ease}' +
   '.wSkVaW_browserTabAdd:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-style:solid;border-color:var(--dsw-alias-border-l2)}' +
+  // Desktop shell drag regions: elements flagged data-window-drag become the frameless
+  // window's title bar strip (inert in normal browsers). Interactive children opt out.
+  '[data-window-drag="true"]{-webkit-app-region:drag}' +
+  '[data-window-drag="true"] button,[data-window-drag="true"] input,[data-window-drag="true"] [data-dsh-harness-portal="tabs-bar"]{-webkit-app-region:no-drag}' +
+  'body[data-dsh-desktop="1"] .wSkVaW_header{padding-right:172px!important}' +
+  // Top-strip alignment: the sidebar brand/new-session row sits 2px lower than
+  // the 52px header band — pull it up so both centers coincide (y=26).
+  '.hHd-Xa_logoRow{margin-top:-2px!important}' +
+  // Session switches remount the workspace root; a toggling scrollbar shifts
+  // the layout horizontally ("global jitter"). Reserve the gutter instead.
+  '.wSkVaW_scrollBody{scrollbar-gutter:stable!important}' +
+  // View pills (对话/轨迹/更多) drop to a second header row, level with the
+  // sidebar's 插件 nav row (cy=82 below the shared 52px brand band).
+  '.wSkVaW_viewTabs{transform:translateY(-5.3px)!important}' +
+  '.wSkVaW_header:has(.wSkVaW_viewTabs){height:110px!important;min-height:110px!important}' +
   SSH_CLIENT_CSS_APPEND;
 
 const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
@@ -42,6 +57,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 					stableKeys: new Map(),
 					customTitles: new Map(),
 					optimisticActiveId: void 0,
+					activeSessionId: "",
 					noTabsHomeMode: false,
 					homeStandbySessionId: void 0,
 					awaitingStandbySession: false,
@@ -375,7 +391,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				window.addEventListener("pointercancel", finishPointer);
 			};
 
-			const effectiveActiveId = store.optimisticActiveId ?? sessionId;
+			const effectiveActiveId = store.optimisticActiveId ?? sessionId ?? store.activeSessionId;
 
 			return (0, react_jsx_runtime.jsxs)("div", {
 				ref: barRef,
@@ -2213,22 +2229,20 @@ function patchWorkspaceClient(rootDir: string): void {
 							const tabStore = globalThis.__dshBrowserTabsStore;
 							const mappedSid = st.roomSessionMap[roomId];
 							if (mappedSid && !tabStore?.closedIds?.has(mappedSid)) {
-								if (list?.byId?.[mappedSid]) {
-									st.bindSessionToRoom(mappedSid, roomId);
-									if (tabStore) {
-										tabStore.noTabsHomeMode = false;
-										tabStore.optimisticActiveId = void 0;
-										tabStore.setCustomTitle?.(mappedSid, title);
-									}
-									open?.(mappedSid);
-									return;
-								}
 								if (tabStore?.optimisticTabs?.has(mappedSid)) {
 									tabStore.noTabsHomeMode = false;
 									tabStore.optimisticActiveId = mappedSid;
 									tabStore.setCustomTitle?.(mappedSid, title);
 									return;
 								}
+								st.bindSessionToRoom(mappedSid, roomId);
+								if (tabStore) {
+									tabStore.noTabsHomeMode = false;
+									tabStore.optimisticActiveId = void 0;
+									tabStore.setCustomTitle?.(mappedSid, title);
+								}
+								open?.(mappedSid);
+								return;
 							}
 							const defaultWsId = workspaces?.[0]?.workspaceId;
 							if (tabStore?.noTabsHomeMode) {

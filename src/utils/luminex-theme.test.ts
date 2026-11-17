@@ -152,13 +152,21 @@ test('buildLuminexPresetCss includes universal theme-switching, menu icon visibi
     'Runtime code must provide deep, function-specific hover descriptions for Superagent and dsh-purge controls',
   );
   assert.ok(
-    runtimeCode.includes('globalThis.__dshTooltipMaxShows : 3') &&
-      runtimeCode.includes('globalThis.__dshTooltipCooldownMs : 30000') &&
+    runtimeCode.includes('globalThis.__dshTooltipMaxShows : 200') &&
+      runtimeCode.includes('globalThis.__dshTooltipCooldownMs : 0') &&
       runtimeCode.includes('globalThis.__dshTooltipAutoHideMs : 5000') &&
       runtimeCode.includes('__dshTooltipQuotaState') &&
       runtimeCode.includes('data-dsh-tip-member') &&
       runtimeCode.includes('const showMemberTag = Boolean(spec.isMemberTip && spec.tag);'),
-    'Runtime code must enforce 3-show limit with 30s cooldown, 5s auto-dismiss, and restrict tag badges to specific Bot/Agent items',
+    'Runtime code must enforce tooltip quota config, 5s auto-dismiss, and restrict tag badges to specific Bot/Agent items',
+  );
+  assert.ok(
+    css.includes('.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_logoRow > .hHd-Xa_toggle{width:36px!important;height:36px!important') &&
+      css.includes('.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:calc(100% - 44px)!important;max-width:calc(100% - 44px)!important;height:36px!important') &&
+      css.includes('.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_logoRow > .hHd-Xa_toggle,.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_newSessionRow .hHd-Xa_newSession{width:36px!important;height:36px!important') &&
+      css.includes('.hHd-Xa_logoRow > .hHd-Xa_toggle svg,.hHd-Xa_newSession svg,.hHd-Xa_newSession .hHd-Xa_newSessionContent > svg{width:16px!important;height:16px!important'),
+    'Must enforce identical 36px height, alignment, and 16x16 SVG icon sizing for .hHd-Xa_newSession and .hHd-Xa_toggle across all themes and expanded/collapsed states',
   );
 });
+
 

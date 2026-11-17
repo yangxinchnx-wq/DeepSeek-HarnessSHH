@@ -1,6 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -175,7 +176,7 @@ export class McpDesktopStore {
     fs.mkdirSync(stateDir, { recursive: true });
     this.filePath = path.join(stateDir, 'mcp-desktop-settings.json');
     this.workspaceDir =
-      workspaceDir || path.resolve(process.cwd(), 'workspaces', 'deepseek-harness', 'default-workspace');
+      workspaceDir || path.join(os.homedir(), '.dsh', 'workspaces', 'deepseek-harness', 'default-workspace');
     this.state = this.loadOrSeed();
     this.syncWindowsGuiSkill();
   }

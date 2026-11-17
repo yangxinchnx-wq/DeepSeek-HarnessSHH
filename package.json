@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.mjs",
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
+    "desktop": "electron .",
+    "desktop:build": "electron-builder --win --config electron-builder.yml",
+    "build": "tsc --noEmit",
     "test": "tsx --test src/utils/proxy-helpers.test.ts",
     "lint": "tsc --noEmit"
   },
@@ -54,9 +58,13 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@typescript/typescript-win32-x64": "^7.0.2",
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0",
     "esbuild": "^0.25.0",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
+  },
+  "optionalDependencies": {
+    "@typescript/typescript-win32-x64": "^7.0.2"
   }
 }

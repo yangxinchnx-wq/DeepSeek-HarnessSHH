@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   extractLaunchTokenUrl,
   extractSessionCookieFromHeaders,
@@ -10,6 +12,7 @@ import {
   stripSystemReminders,
   reconcileBrowserTabIds,
 } from './proxy-helpers.ts';
+import { applyDshUpstreamSync } from './dsh-upstream-sync.ts';
 
 describe('proxy-helpers', () => {
   it('extracts launch token URL from dsh web stdout', () => {
@@ -140,6 +143,43 @@ describe('proxy-helpers', () => {
       archivedSessionIds: ['sess_arch'],
     });
     assert.deepEqual(tabs, ['sess_1', 'sess_2', 'sess_3']);
+  });
+
+  it('applies 0.2.2-rc.3 client runtime resilience guards idempotently', () => {
+    applyDshUpstreamSync(process.cwd());
+    applyDshUpstreamSync(process.cwd());
+
+    const nmScope = path.join(process.cwd(), 'node_modules/@deepseek-ai');
+    const sessCtrl = fs.readFileSync(
+      path.join(nmScope, 'dsh-api-session-controller/lib/client.js'),
+      'utf8',
+    );
+    assert.ok(
+      sessCtrl.includes('String(error.message||error).includes("signal is aborted")'),
+      'session-controller client should guard control stream abort errors',
+    );
+    assert.ok(
+      sessCtrl.includes('if(this.record===void 0&&this.releaseReference===void 0)return;'),
+      'ClientSessionReference.release() should be idempotent',
+    );
+
+    const cordisRunner = fs.readFileSync(
+      path.join(nmScope, 'dsh-cordis-client-runner/lib/client.js'),
+      'utf8',
+    );
+    assert.ok(
+      cordisRunner.includes('let rem;try{rem=ctx.remote}catch{return}const fn=rem?.dynamicCordisRunner?.syncInspectManifest;if(typeof fn!=="function")return;'),
+      'cordis-client-runner should guard missing syncInspectManifest function and inactive context',
+    );
+
+    const sidebarRight = fs.readFileSync(
+      path.join(nmScope, 'dsh-client-ui-sidebar-right/lib/client.js'),
+      'utf8',
+    );
+    assert.ok(
+      sidebarRight.includes('if(this.retired||this.disposed||String(error?.message??error).includes("is released")'),
+      'sidebar-right should ignore disposed/released session reference errors',
+    );
   });
 });
 

@@ -202,27 +202,55 @@ globalThis.__dshCreateNewTab = function (_opt, opts) {
   } catch (e) {
     harnessLog("createNewTab.startSession", e);
   }
-  var attempts = 0;
-  var timer = setInterval(function () {
-    attempts += 1;
+  var resolved = false;
+  var unsubSess = null;
+  var unsubSel = null;
+  var timer = null;
+  function cleanupResolve() {
+    if (timer) { clearInterval(timer); timer = null; }
+    try { if (typeof unsubSess === "function") unsubSess(); } catch (_e) {}
+    try { if (typeof unsubSel === "function") unsubSel(); } catch (_e) {}
+    unsubSess = null;
+    unsubSel = null;
+  }
+  function tryResolveNewTab() {
+    if (resolved) return true;
     try {
-      var snap = uw.sessions.list.getSnapshot();
-      var ids = snap.ids || [];
+      var snap = uw.sessions && uw.sessions.list && uw.sessions.list.getSnapshot();
+      var ids = (snap && snap.ids) || [];
       var newId = ids.find(function (id) { return !prevIds.has(id); }) || null;
       var selId = "";
       try { selId = uw.selection.getSnapshot().sessionId || ""; } catch (_e) {}
       if (!newId && selId && selId !== prevSel) newId = selId;
       if (newId) {
-        clearInterval(timer);
+        resolved = true;
+        cleanupResolve();
         tabStore.resolveOptimisticTab(newId, optKey);
         if (opts && opts.title) tabStore.setCustomTitle(newId, opts.title);
         globalThis.__dshSelectMainPanel(null);
         try { uw.openSession(newId); } catch (_e) {}
-      } else if (attempts > 50) {
-        clearInterval(timer);
+        return true;
       }
     } catch (_e) {}
-  }, 120);
+    return false;
+  }
+  if (!tryResolveNewTab()) {
+    try {
+      if (uw.sessions && uw.sessions.list && typeof uw.sessions.list.subscribe === "function") {
+        unsubSess = uw.sessions.list.subscribe(tryResolveNewTab);
+      }
+      if (uw.selection && typeof uw.selection.subscribe === "function") {
+        unsubSel = uw.selection.subscribe(tryResolveNewTab);
+      }
+    } catch (_e) {}
+    var attempts = 0;
+    timer = setInterval(function () {
+      attempts += 1;
+      if (tryResolveNewTab() || attempts > 80) {
+        cleanupResolve();
+      }
+    }, 40);
+  }
   return created;
 };
 
@@ -250,6 +278,10 @@ function resolveWorkspaceHelpers(ctx) {
   };
   var open = function (sessionId) {
     try {
+      // Upstream switches the main conversation via uiWorkspace.openSession
+      // (replaceMain → reveal). selection.set is a replace-mode store write and
+      // does not drive the conversation panel — tabs must mirror the sidebar.
+      if (typeof uw.openSession === "function") return uw.openSession(sessionId);
       var sel = uw.selection;
       if (sel && typeof sel.set === "function") return sel.set({ sessionId: sessionId });
       if (sel && typeof sel.update === "function") return sel.update(function () { return { sessionId: sessionId }; });
@@ -316,6 +348,7 @@ function portalMount(options) {
   var host = null;
   var reactRoot = null;
   function tryMount() {
+    if (host && host.isConnected && host.parentElement && host.parentElement.isConnected) return true;
     var anchor = options.findAnchor();
     if (!anchor) return false;
     if (host && host.isConnected && host.parentElement === anchor) return true;
@@ -345,6 +378,7 @@ function portalMount(options) {
   }
   var scheduled = false;
   var observer = new MutationObserver(function () {
+    if (host && host.isConnected && host.parentElement && host.parentElement.isConnected) return;
     // Debounce to the next frame; re-render storms must not thrash portals.
     if (scheduled) return;
     scheduled = true;
@@ -358,7 +392,7 @@ function portalMount(options) {
       try {
         if (!host || !host.isConnected) tryMount();
       } catch (_e) {}
-    }, 1200);
+    }, 100);
     if (document.body) {
       tryMount();
       observer.observe(document.body, { childList: true, subtree: true });
@@ -446,13 +480,30 @@ function mountTabsBar(ctx) {
     hostTag: "div",
     render: function () {
       var list = getSessionListSnapshot();
+      // Services arrive asynchronously after mount — resolve lazily per render
+      // so open/create never operate on the empty mount-time snapshot.
+      var liveHelpers = resolveWorkspaceHelpers(ctx);
+      var openById = function (sessionId) {
+        try {
+          var uw = svc.uiWorkspace || {};
+          // Upstream switches the main conversation via uiWorkspace.openSession
+          // (replaceMain → reveal). selection.set is a replace-mode store write
+          // and does not drive the conversation panel — tabs must mirror the sidebar.
+          if (typeof uw.openSession === "function") return uw.openSession(sessionId);
+          var sel = uw.selection;
+          if (sel && typeof sel.set === "function") return sel.set({ sessionId: sessionId });
+          if (sel && typeof sel.update === "function") return sel.update(function () { return { sessionId: sessionId }; });
+        } catch (e) {
+          harnessLog("open session", e);
+        }
+      };
       return react.createElement(BrowserTaskTabsBar, {
         sessionId: globalThis.__dshActiveSessionId || void 0,
         useSessions: useSessions,
         useWorkspaces: useWorkspaces,
-        open: helpers.open,
+        open: openById,
         createNewTab: function (opt, opts) {
-          helpers.startSession((opts && opts.workspaceId) || helpers.workspaces[0] && helpers.workspaces[0].workspaceId, {});
+          liveHelpers.startSession((opts && opts.workspaceId) || liveHelpers.workspaces[0] && liveHelpers.workspaces[0].workspaceId, {});
         },
         closeTab: function (id) {
           var tabStore = getDshBrowserTabsStore();
@@ -567,25 +618,39 @@ function mountConversationInsets(ctx) {
       );
     };
     renderHosts();
+    var lastL = -1, lastW = -1, lastT = -1, lastVisible = false;
+    barHost.style.position = 'fixed';
+    barHost.style.zIndex = '35';
+    drawerHost.style.position = 'fixed';
+    drawerHost.style.zIndex = '60';
     var syncLoop = function () {
       try {
         var sb = document.querySelector('[data-conversation-scroll], [class*="wSkVaW_scrollBody"]');
         if (sb) {
           var r = sb.getBoundingClientRect();
-          barHost.style.display = 'block';
-          barHost.style.position = 'fixed';
-          barHost.style.left = Math.round(r.left) + 'px';
-          barHost.style.width = Math.round(r.width) + 'px';
-          barHost.style.top = Math.round(r.top) + 'px';
-          barHost.style.zIndex = '35';
-          var barH = barHost.offsetHeight;
-          if (barH > 0 && sb.style.paddingTop !== barH + 'px') sb.style.paddingTop = barH + 'px';
-          drawerHost.style.display = 'block';
-          drawerHost.style.position = 'fixed';
-          drawerHost.style.zIndex = '60';
-        } else {
+          var nl = Math.round(r.left);
+          var nw = Math.round(r.width);
+          var nt = Math.round(r.top);
+          if (!lastVisible) {
+            barHost.style.display = 'block';
+            drawerHost.style.display = 'block';
+            lastVisible = true;
+          }
+          if (nl !== lastL || nw !== lastW || nt !== lastT) {
+            lastL = nl;
+            lastW = nw;
+            lastT = nt;
+            barHost.style.left = nl + 'px';
+            barHost.style.width = nw + 'px';
+            barHost.style.top = nt + 'px';
+          }
+          var barH = barHost.firstElementChild ? barHost.offsetHeight : 0;
+          var targetPad = barH > 0 ? barH + 'px' : '';
+          if (sb.style.paddingTop !== targetPad) sb.style.paddingTop = targetPad;
+        } else if (lastVisible) {
           barHost.style.display = 'none';
           drawerHost.style.display = 'none';
+          lastVisible = false;
         }
       } catch (_e) {}
       requestAnimationFrame(syncLoop);
@@ -620,8 +685,10 @@ function syncThemeAttrs(snapshot) {
     try {
       if (isPreset) {
         window.localStorage.setItem("dsh_harness_theme_choice", JSON.stringify({ mode: "preset", id: pref }));
+        window.localStorage.setItem("dsh_appearance_preset", pref);
       } else if (pref) {
         window.localStorage.setItem("dsh_harness_theme_choice", JSON.stringify({ mode: "stock", id: pref }));
+        window.localStorage.removeItem("dsh_appearance_preset");
       }
     } catch (_e) {}
   }
@@ -639,7 +706,7 @@ function syncThemeAttrs(snapshot) {
       }
       return;
     }
-    pref = mode === "preset" ? "" : "preset-1"; // empty → runtime re-applies recorded id via attrs below
+    pref = mode === "preset" ? "" : "preset-1";
     if (mode === "preset") {
       try {
         var rec = JSON.parse(window.localStorage.getItem("dsh_harness_theme_choice") || "{}");
@@ -654,6 +721,10 @@ function syncThemeAttrs(snapshot) {
   } else if (pref && document.body) {
     document.body.removeAttribute("data-dsh-theme-id");
     document.body.removeAttribute("data-dsh-preset1-mode");
+    var scheme = (snapshot && snapshot.theme && snapshot.theme.colorScheme) || (pref === "dark" ? "dark" : "light");
+    var isDark = scheme === "dark";
+    document.body.toggleAttribute("data-ds-dark-theme", isDark);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }
 }
 
@@ -697,6 +768,42 @@ function apply(ctx) {
         svc.uiConversation = host.uiConversation;
         svc.layout = host.layout;
         captureServices(ctx);
+        // Track the active conversation so the tabs bar highlights (and stays
+        // connected to) whatever the sidebar/main panel is showing. The
+        // selection store's subscribe does not fire on every conversation
+        // switch path, so a cheap poll backs it up.
+        try {
+          var tabsStore = getDshBrowserTabsStore();
+          var syncActiveSession = function () {
+            try {
+              var uwNow = svc.uiWorkspace || {};
+              var snap = uwNow.selection && uwNow.selection.getSnapshot && uwNow.selection.getSnapshot();
+              var id = (snap && snap.sessionId) || "";
+              if (id && tabsStore.activeSessionId !== id) {
+                tabsStore.activeSessionId = id;
+                tabsStore.emit(true);
+              }
+            } catch (_e2) {}
+          };
+          var sel = host.uiWorkspace && host.uiWorkspace.selection;
+          if (sel && typeof sel.subscribe === "function" && !tabsStore.__selectionBound) {
+            tabsStore.__selectionBound = true;
+            syncActiveSession();
+            sel.subscribe(function (snap) {
+              var id = "";
+              try { id = (snap && snap.sessionId) || ""; } catch (_e1) {}
+              if (id && tabsStore.activeSessionId !== id) {
+                tabsStore.activeSessionId = id;
+                tabsStore.emit(true);
+              }
+            });
+          }
+          if (!tabsStore.__activePoll) {
+            tabsStore.__activePoll = setInterval(syncActiveSession, 800);
+          }
+        } catch (e) {
+          harnessLog("tabs-active-sync", e);
+        }
       },
     );
   } catch (e) {
