@@ -95,3 +95,45 @@ test('deriveVisibleTabIds hides standby blank session in noTabsHomeMode until me
   assert.deepEqual(afterSend.visibleTabIds, ['s1']);
   assert.equal(afterSend.shouldExitHomeMode, true);
 });
+
+test('deriveVisibleTabIds keeps an opened tab whose session summary is missing from the listing', () => {
+  // s1 is referenced by the workspace but absent from byId (server listing can
+  // omit it). It was opened as a tab, so it must survive the recompute.
+  const state = {
+    order: ['s1', 's2'],
+    closedIds: new Set<string>(),
+    customTitles: new Map<string, string>(),
+    noTabsHomeMode: false,
+    homeStandbySessionId: null,
+  };
+
+  const kept = deriveVisibleTabIds({
+    workspaceSessionIds: ['s1', 's2'],
+    allSessionIds: ['s2'],
+    archivedSessionIds: [],
+    byId: { s2: { id: 's2', blank: false, running: false } },
+    state,
+  });
+  assert.deepEqual(kept.visibleTabIds, ['s1', 's2']);
+
+  // An unopened session without a summary stays hidden (no resurrection).
+  const hidden = deriveVisibleTabIds({
+    workspaceSessionIds: ['s3'],
+    allSessionIds: [],
+    archivedSessionIds: [],
+    byId: {},
+    state,
+  });
+  assert.deepEqual(hidden.visibleTabIds, ['s1', 's2']);
+
+  // Closing the tab still removes it.
+  state.closedIds.add('s1');
+  const closed = deriveVisibleTabIds({
+    workspaceSessionIds: ['s1', 's2'],
+    allSessionIds: ['s2'],
+    archivedSessionIds: [],
+    byId: { s2: { id: 's2', blank: false, running: false } },
+    state,
+  });
+  assert.deepEqual(closed.visibleTabIds, ['s2']);
+});

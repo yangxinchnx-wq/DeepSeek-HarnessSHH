@@ -18,10 +18,10 @@ const BROWSER_TAB_CSS_APPEND =
   '.wSkVaW_browserTabsBar::-webkit-scrollbar{display:none}' +
   '.wSkVaW_browserTab{display:inline-flex;align-items:center;gap:8px;height:34px;width:168px;min-width:168px;max-width:168px;flex:0 0 168px;padding:0 8px 0 10px;border-radius:9999px;border:1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.16));background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);color:var(--dsw-alias-label-secondary);font-size:13px;line-height:18px;cursor:pointer;user-select:none;transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease;position:relative;box-sizing:border-box;touch-action:none}' +
   '.wSkVaW_browserTab:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}' +
-  '.wSkVaW_browserTabActive{background:#FFFFFF;border-color:#FF6A2B;border-width:1.5px;color:#1F2329;font-weight:600;box-shadow:0 2px 6px rgba(255,106,43,.12)}' +
+  '.wSkVaW_browserTabActive{background:var(--dsw-specific-bubble-highlight, #FFFFFF);border-color:var(--dsw-alias-state-business-primary, #FF6A2B);border-width:1.5px;color:var(--dsw-alias-label-primary, #1F2329);font-weight:600;box-shadow:0 2px 6px var(--dsw-alias-state-business-tertiary, rgba(255,106,43,.12))}' +
   '.wSkVaW_browserTabDragging{z-index:10;cursor:grabbing!important;box-shadow:0 4px 12px rgba(0,0,0,.16)!important;transition:none!important;background:var(--dsw-alias-bg-base)!important}' +
   '.wSkVaW_browserTabIcon{width:14px;height:14px;flex:none;color:var(--dsw-alias-label-tertiary);display:inline-flex;align-items:center;justify-content:center;pointer-events:none}' +
-  '.wSkVaW_browserTabActive .wSkVaW_browserTabIcon{color:#FF6A2B}' +
+  '.wSkVaW_browserTabActive .wSkVaW_browserTabIcon{color:var(--dsw-alias-state-business-primary, #FF6A2B)}' +
   '.wSkVaW_browserTabTitle{display:inline-flex;align-items:baseline;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left}' +
   '.wSkVaW_browserTabRenameInput{flex:1;min-width:0;width:100%;height:22px;padding:0 5px;margin:0;border-radius:4px;border:1px solid var(--dsw-alias-state-business-primary, #4d6bfe);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px;font-family:inherit;outline:none;box-sizing:border-box}' +
   '.wSkVaW_browserTabWs{font-size:11px;line-height:14px;padding:1px 5px;border-radius:4px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none;pointer-events:none}' +
@@ -56,6 +56,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 					optimisticTabs: new Map(),
 					stableKeys: new Map(),
 					customTitles: new Map(),
+					titleMemory: new Map(),
 					optimisticActiveId: void 0,
 					activeSessionId: "",
 					noTabsHomeMode: false,
@@ -199,7 +200,18 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				for (const id of [...wsSessionIds, ...allSessionIds]) {
 					if (!id || validSet.has(id) || archivedSet.has(id) || store.closedIds.has(id)) continue;
 					const summary = sessionsState?.byId?.[id];
-					if (summary === void 0 || summary.origin === "subagent") continue;
+					if (summary === void 0) {
+						// The server-side session listing can omit a session that the
+						// workspace still references (e.g. outside the current query
+						// window). A tab the user already opened must not vanish on
+						// recompute — keep it; unopened ids stay hidden as before.
+						if (store.order.includes(id) || store.stableKeys.has(id) || store.optimisticTabs.has(id)) {
+							validSet.add(id);
+							validCandidates.push(id);
+						}
+						continue;
+					}
+					if (summary.origin === "subagent") continue;
 					if (!store.order.includes(id) && !store.stableKeys.has(id) && store.optimisticTabs.size > 0) {
 						const firstOptKey = store.optimisticTabs.keys().next().value;
 						const optMeta = firstOptKey !== void 0 ? store.optimisticTabs.get(firstOptKey) : void 0;
@@ -228,6 +240,14 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 					}
 					validSet.add(id);
 					validCandidates.push(id);
+				}
+				// Opened tabs survive list churn: a session the user opened keeps its
+				// tab even when neither the workspace nor the session list mentions
+				// it anymore (closed/archived ids are still excluded).
+				for (const orderId of store.order) {
+					if (!orderId || validSet.has(orderId) || archivedSet.has(orderId) || store.closedIds.has(orderId)) continue;
+					validSet.add(orderId);
+					validCandidates.push(orderId);
 				}
 				for (const optId of store.optimisticTabs.keys()) {
 					if (!validSet.has(optId) && !store.closedIds.has(optId)) {
@@ -410,7 +430,11 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 						const ws = (workspacesState?.items ?? []).find((w) => w.sessionIds.includes(tabId) || (summary?.cwd && w.path === summary.cwd) || (optTab?.workspaceId && w.workspaceId === optTab.workspaceId));
 						const wsLabel = ws ? workspaceDisplayTitle(ws.title, defaultWorkspaceName) : "";
 						const customTitle = store.getCustomTitle(tabId);
-						const rawTitle = customTitle || (summary?.blank ? newSessionLabel : (summary?.title?.trim() || summary?.displayTitle || optTab?.title || newSessionLabel));
+						const memoryTitle = store.titleMemory.get(tabId);
+						const rawTitle = customTitle || (summary?.blank ? newSessionLabel : (summary?.title?.trim() || summary?.displayTitle || optTab?.title || memoryTitle || newSessionLabel));
+						// Remember the last real title so a tab whose summary is missing
+						// still shows its name instead of falling back to 新会话.
+						if (!summary?.blank && rawTitle && rawTitle !== newSessionLabel) store.titleMemory.set(tabId, rawTitle);
 						const showWsBadge = (workspacesState?.items?.length ?? 0) > 1 && wsLabel !== "";
 						const tooltipText = wsLabel ? \`\${wsLabel} · \${rawTitle}\` : rawTitle;
 						const isEditing = editingTabId === tabId;

@@ -138,10 +138,29 @@ export function deriveVisibleTabIds(params: {
     if (!id || validSet.has(id) || archivedSet.has(id) || state.closedIds.has(id)) continue;
     if (hiddenStandbyId && id === hiddenStandbyId) continue;
     const summary = byId[id];
-    if (!summary || summary.origin === 'subagent') continue;
+    if (!summary) {
+      // The session listing can omit a session the workspace still references.
+      // A tab the user already opened must not vanish on recompute — keep it;
+      // unopened ids stay hidden as before.
+      if (state.order.includes(id)) {
+        validSet.add(id);
+        validCandidates.push(id);
+      }
+      continue;
+    }
+    if (summary.origin === 'subagent') continue;
     if (effectiveNoTabsHomeMode && summary.blank) continue;
     validSet.add(id);
     validCandidates.push(id);
+  }
+
+  // Opened tabs survive list churn: keep ids from `order` that neither the
+  // workspace nor the session list mentions anymore (closed/archived excluded).
+  for (const orderId of state.order) {
+    if (!orderId || validSet.has(orderId) || archivedSet.has(orderId) || state.closedIds.has(orderId)) continue;
+    if (hiddenStandbyId && orderId === hiddenStandbyId) continue;
+    validSet.add(orderId);
+    validCandidates.push(orderId);
   }
 
   const nextOrder: string[] = [];
