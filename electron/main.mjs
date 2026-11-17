@@ -16,6 +16,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // and then the whole shell. The UI is a standard web app — software rendering
 // is plenty and avoids the flaky GPU/disk-cache path entirely.
 app.disableHardwareAcceleration();
+// Windows' native window-occlusion tracker can stick in "occluded" after
+// focus/coverage changes and then throttle painting forever: the window keeps
+// showing a stale frame while the DOM, clicks and state all keep working
+// underneath (clicks look dead, mid-drag tab ghosts linger as "overlays").
+// Stop Chromium from calculating native occlusion and from throttling this
+// window in the background so the shell always paints what it renders.
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 
 function resolveServerRoot() {
   // Dev: the shell lives in the project root, so does the server tree.
@@ -245,6 +252,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      backgroundThrottling: false, // keep painting when the shell loses focus
     },
   });
 
