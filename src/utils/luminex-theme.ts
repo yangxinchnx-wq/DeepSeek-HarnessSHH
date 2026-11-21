@@ -277,7 +277,7 @@ export function buildLuminexPresetCss(): string {
     `body,.pI_x6G_frame,.pI_x6G_sidebarCol,.pI_x6G_centerCol,.pI_x6G_rightbarCol,.wSkVaW_root,.wSkVaW_header,.wSkVaW_headerBlank,.wSkVaW_body,.wSkVaW_scrollBody,.hHd-Xa_root{transition:${universalSurfaceTransition}}`,
     `.hHd-Xa_newSession,.hHd-Xa_iconButton,.YDXeBa_sessionRow,.YDXeBa_projectRow,.wSkVaW_browserTab,.wSkVaW_browserTabAdd,.wSkVaW_heroWorkspaceRow,.wSkVaW_heroWorkspaceRow button,.pXSMma_headline,.uV2eYG_card,.uV2eYG_scroll,.uV2eYG_placeholder,.uV2eYG_add,.uV2eYG_primary,._8HJdBW_themeCube{transition:${interactiveControlTransition}}`,
     `.hHd-Xa_panelRow,.hHd-Xa_collapsed .hHd-Xa_panelRow{border:0 none transparent!important;border-inline:0 none transparent!important;border-left:0 none transparent!important;border-right:0 none transparent!important;border-color:transparent!important;background-clip:border-box!important;background-origin:border-box!important;transition:background-color .22s cubic-bezier(.22,1,.36,1),color .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.22,1,.36,1)!important}`,
-    `.hHd-Xa_newSession:active,.hHd-Xa_iconButton:active,.hHd-Xa_panelRow:active,.wSkVaW_browserTab:active,.wSkVaW_browserTabAdd:active,.wSkVaW_heroWorkspaceRow button:active,.uV2eYG_add:active,.uV2eYG_primary:active,._8HJdBW_themeCube:active{transform:scale(0.97)}`,
+    `.hHd-Xa_newSession:active,.hHd-Xa_iconButton:active,.hHd-Xa_panelRow:active,.wSkVaW_browserTabAdd:active,.wSkVaW_heroWorkspaceRow button:active,.uV2eYG_add:active,.uV2eYG_primary:active,._8HJdBW_themeCube:active{transform:scale(0.97)}`,
     `.wSkVaW_composerHero .pXSMma_root,.wSkVaW_composerHero .wSkVaW_heroWorkspaceRow{transform:translateY(-8px)!important}`,
     `.hHd-Xa_newSession svg,.hHd-Xa_iconButton svg,.hHd-Xa_panelRow svg,.wSkVaW_browserTab svg,.wSkVaW_browserTabAdd svg,._8HJdBW_themeCube svg{flex-shrink:0;visibility:visible!important;opacity:1!important;transition:transform .24s cubic-bezier(.22,1,.36,1),color .24s cubic-bezier(.22,1,.36,1)}`,
     `._itemIcon_1p5el_165,.yHnPSG_signedOutMenu [role=menuitem]>span:first-child:not(:last-child),._3e4SsG_itemIcon,[role=menu] [role=menuitem]>span:first-child:not(:last-child){color:var(--dsw-alias-label-primary)!important;opacity:1!important;visibility:visible!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}`,
@@ -391,15 +391,12 @@ export function buildLuminexPresetCss(): string {
     `.dsh_cpt_capsule::before{content:"";position:absolute;inset:0;border-radius:999px;corner-shape:round!important;background:linear-gradient(45deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.025) 52%,rgba(8,10,18,0.10) 100%);pointer-events:none;z-index:1}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh_cpt_capsule::before{background:linear-gradient(135deg,rgba(255,255,255,0.62) 0%,rgba(255,255,255,0.14) 48%,rgba(0,0,0,0.05) 100%)}`,
     `.dsh_cpt_capsule:active{cursor:grabbing}`,
-    // 9. Session-switch softening: upstream remounts the conversation root on
-    // switch (~460ms blank while the new session settles) — keep the composer
-    // visible during settling and fade message items in so the pop reads as a
-    // graceful transition.
-    `@keyframes dsh-soft-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] [class*="flowItem"]{animation:dsh-soft-in .18s ease-out both}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:.5;transition:opacity .18s ease-out}`,
-    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1;transition:opacity .3s ease-out}`,
+    // 9. Direct instant session switching: keep composer visible and scrollBody
+    // at full opacity with zero fade/translate jitter on messages or stage.
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] [class*="flowItem"]{animation:none!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important;opacity:1!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:1!important;transition:none!important}`,
+    `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1!important}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"] .dsh_cpt_capsule{background-color:rgba(56,62,84,0.88);background-image:linear-gradient(45deg,rgba(90,98,128,0.42) 0%,rgba(48,53,74,0.30) 54%,rgba(26,30,44,0.44) 100%);border:1px solid rgba(255,255,255,0.13);box-shadow:12px -6px 28px -6px rgba(6,8,18,0.30),4px -2px 12px -3px rgba(6,8,18,0.16),inset 1px -0.5px 2px rgba(255,255,255,0.20),inset -1px 1px 2.5px rgba(6,8,15,0.26),inset -2px 0 6px rgba(192,38,211,0.15)}`,
     `body[data-dsh-theme-id="${LUMINEX_PRESET_ID}"][data-dsh-preset1-mode="light"] .dsh_cpt_capsule{background-color:rgba(224,222,224,0.94);background-image:linear-gradient(135deg,rgba(242,242,244,0.95) 0%,rgba(212,210,214,0.85) 54%,rgba(198,192,188,0.82) 100%);border:1px solid rgba(255,255,255,0.68);border-bottom-color:rgba(0,0,0,0.12);border-right-color:rgba(0,0,0,0.10);box-shadow:10px 12px 22px -4px rgba(0,0,0,0.20),3px 5px 10px -2px rgba(0,0,0,0.10),inset 1.5px 1.5px 3px #ffffff,inset -1px -1.5px 3px rgba(0,0,0,0.12)}`,
     `.dsh_cpt_glint{position:absolute;bottom:2px;left:3px;width:26px;height:6px;border-radius:999px;corner-shape:round!important;background:radial-gradient(ellipse at center,rgba(255,255,255,0.88) 0%,rgba(255,255,255,0.32) 45%,rgba(255,255,255,0) 78%);transform:rotate(24deg);pointer-events:none;z-index:3}`,
@@ -482,7 +479,7 @@ export function buildPreset2Css(): string {
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_header,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerBlank{background:transparent!important;border-bottom:none!important;box-shadow:none!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTab{border-radius:9999px!important;background-color:#DCDCE0!important;background-image:${recessedBg}!important;border:1px solid rgba(255,255,255,0.45)!important;box-shadow:${recessedShadow}!important;color:#6E7180!important;transition:${springTransition}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTab:hover{color:#2B2D38!important;box-shadow:inset 1.5px 1.5px 4px rgba(0,0,0,0.08),inset -2px -2px 5px rgba(255,255,255,0.95)!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTab:active{transform:scale(0.97)!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTab:active:not(.wSkVaW_browserTabDragging){transform:none!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabActive{position:relative!important;overflow:hidden!important;border-radius:9999px!important;background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1px solid rgba(255,255,255,0.68)!important;box-shadow:${elevatedShadow}!important;color:#2B2D38!important;font-weight:500!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabActive::before{content:"";position:absolute;left:50%;top:50%;width:94%;height:92%;transform:translate(-50%,-50%);border-radius:9999px;background:${spindleOrangeBloom};filter:blur(10px);opacity:0.36;pointer-events:none;transition:${glowTransition};z-index:0}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabActive:hover::before{opacity:0.48;transform:translate(-50%,-50%) scale(1.02)}`,
@@ -491,13 +488,11 @@ export function buildPreset2Css(): string {
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd{border-radius:9999px!important;background-color:#DCDCE0!important;background-image:${recessedBg}!important;border:1px solid rgba(255,255,255,0.55)!important;box-shadow:${recessedShadow}!important;color:#2B2D38!important;transition:${springTransition}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd:hover{background-color:#EFEFF2!important;background-image:${elevatedSurfaceBg}!important;box-shadow:${elevatedShadow}!important}`,
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabAdd:active{transform:scale(0.97)!important;box-shadow:${recessedShadow}!important}`,
-    // Session-switch softening (same as preset 1): composer stays visible while
-    // the new session settles, message items fade in instead of popping.
-    `@keyframes dsh-soft-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] [class*="flowItem"]{animation:dsh-soft-in .18s ease-out both}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:.5;transition:opacity .18s ease-out}`,
-    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1;transition:opacity .3s ease-out}`,
+    // Direct instant session switching (same as preset 1): no opacity dip or translate jitter.
+    `body[data-dsh-theme-id="${PRESET2_ID}"] [class*="flowItem"]{animation:none!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important;opacity:1!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody{opacity:1!important;transition:none!important}`,
+    `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1!important}`,
     // Header shell text/icons follow the neumorphic surface (upstream pins near-white on .wSkVaW_header).
     `body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_header,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerBlank,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_titleRow,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerLeading,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabsBar,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabTitle,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_browserTabClose,body[data-dsh-theme-id="${PRESET2_ID}"] .wSkVaW_headerCorner{color:#2B2D38!important}`,
 
@@ -2533,14 +2528,14 @@ export function buildLuminexCanvasRuntimeCode(): string {
 					const canvas = document.querySelector(".wSkVaW_scrollBody");
 					const bodyEl = document.querySelector(".wSkVaW_body");
 					if (!w || !canvas || !bodyEl) return;
-					const cr = canvas.getBoundingClientRect();
-					const br = bodyEl.getBoundingClientRect();
-					// Straddle the conversation canvas top-right corner with the
-					// groove centerline EXACTLY on the corner contour (scale 0.72 →
-					// radius 95 = canvas corner radius, concentric — no tilt), and
-					// a thicker 47px-visual track (local 65.3 ≈ 47 / 0.72).
-					w.style.top = ((cr.top - br.top) - 73) + "px";
-					w.style.right = ((br.right - cr.right) - 73) + "px";
+					if (canvas.hasAttribute("data-dsh-switch-anim")) return;
+					// Use transform-immune layout offsets so session-switch transitions
+					// never shift #dsh-corner-pull-toggle or its curved groove path.
+					const topDelta = canvas.offsetTop + bodyEl.clientTop;
+					const rightBorder = bodyEl.offsetWidth - bodyEl.clientWidth - bodyEl.clientLeft;
+					const rightDelta = (bodyEl.clientWidth - (canvas.offsetLeft + canvas.offsetWidth)) + rightBorder;
+					w.style.top = (topDelta - 73) + "px";
+					w.style.right = (rightDelta - 73) + "px";
 					w.style.transform = "scale(0.72)";
 					w.style.transformOrigin = "72px 168px";
 				} catch (_e) {}

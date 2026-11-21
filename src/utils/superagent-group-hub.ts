@@ -918,12 +918,19 @@ export class SuperagentGroupHubStore {
         break;
       }
 
+      const isBroadcastWave = room.collaborationMode === 'all_broadcast' && hopCounter === 0;
+      if (isBroadcastWave) {
+        hopCounter = 1;
+      }
+
       let lastAgentMsg: GroupMessage | undefined;
 
       for (const agent of nextAgents) {
-        if (hopCounter >= room.maxRelayHops) break;
+        if (!isBroadcastWave && hopCounter >= room.maxRelayHops) break;
         visitedAgentIdsInTurn.add(agent.id);
-        hopCounter += 1;
+        if (!isBroadcastWave) {
+          hopCounter += 1;
+        }
         const nextHop = hopCounter;
 
         // Build recent group conversation context so the Agent collaborates with full awareness

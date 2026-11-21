@@ -55,13 +55,25 @@ async function ensureEnvironmentAndWorkspaces(): Promise<void> {
   const profileDir = path.join(dshHome, 'profiles', 'web');
   fs.mkdirSync(profileDir, { recursive: true });
 
+  let dshVersion = '0.2.2-rc.5';
+  try {
+    const dshPkgJson = JSON.parse(
+      fs.readFileSync(path.join(aiBase, 'dsh', 'package.json'), 'utf8'),
+    );
+    if (typeof dshPkgJson?.version === 'string' && dshPkgJson.version.length > 0) {
+      dshVersion = dshPkgJson.version;
+    }
+  } catch {
+    // Fallback to 0.2.2-rc.5
+  }
+
   const profilePkgPath = path.join(profileDir, 'package.json');
   const profilePkg = {
     name: 'dsh-profile-web',
     private: true,
     dependencies: {
-      '@deepseek-ai/dsh-base': '0.2.2-rc.3',
-      '@deepseek-ai/dsh-web-app': '0.2.2-rc.3',
+      '@deepseek-ai/dsh-base': dshVersion,
+      '@deepseek-ai/dsh-web-app': dshVersion,
       'dsh-purge-community': '1.6.52',
     },
     dsh: {

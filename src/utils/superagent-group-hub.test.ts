@@ -209,3 +209,49 @@ test('5. setActiveRoom, formatGroupRelayForMainChat, and joinRoomViaFederation s
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('6. all_broadcast consults every enabled room agent and room updates persist across store reloads', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'group-hub-broadcast-'));
+  try {
+    const connectorStore = new SuperagentConnectorStore(tmpDir);
+    const groupStore = new SuperagentGroupHubStore(tmpDir, connectorStore);
+    const dingtalk = connectorStore.list().find((c) => c.platform === 'dingtalk')!;
+    assert.ok(dingtalk);
+
+    const updated = groupStore.updateRoom('room-core-collab', {
+      collaborationMode: 'all_broadcast',
+      connectorIds: [dingtalk.id],
+    });
+    assert.equal(updated?.collaborationMode, 'all_broadcast');
+    assert.deepEqual(updated?.connectorIds, [dingtalk.id]);
+
+    // Reload from disk to verify persistence across sessions/restarts
+    const reloaded = new SuperagentGroupHubStore(tmpDir, connectorStore);
+    const persistedRoom = reloaded.getRoom('room-core-collab')!;
+    assert.equal(persistedRoom.collaborationMode, 'all_broadcast');
+    assert.deepEqual(persistedRoom.connectorIds, [dingtalk.id]);
+
+    const outcome = await reloaded.postMessageAndRunRelay({
+      roomId: 'room-core-collab',
+      senderType: 'human',
+      senderId: 'human-lead',
+      senderName: '群主',
+      text: '请全员评估当前发布风险',
+      connectorStore,
+      generateReply: async ({ agent }) => ({
+        thinkingText: `${agent.name} 分析中`,
+        responseText: `${agent.name} 会诊意见`,
+      }),
+    });
+
+    assert.equal(outcome.ok, true);
+    assert.equal(outcome.agentReplies.length, 3);
+    assert.deepEqual(
+      outcome.agentReplies.map((r) => r.senderName),
+      ['架构师 Agent', '安全审计 Agent', '运维与协调 Agent'],
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+

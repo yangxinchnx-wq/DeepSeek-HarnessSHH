@@ -155,10 +155,19 @@ function SegmentedTabs({ items, value, onChange, label: label2, className }) {
   (0, import_react.useEffect)(() => {
     measure();
     if (!list.current || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
+    let rafId = 0;
+    const scheduleMeasure = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        measure();
+      });
+    };
+    const observer = new ResizeObserver(scheduleMeasure);
     observer.observe(list.current);
     for (const tab of list.current.children) observer.observe(tab);
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
     };
   }, [measure, items.length]);

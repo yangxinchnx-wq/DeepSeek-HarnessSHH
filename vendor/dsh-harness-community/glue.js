@@ -15,6 +15,55 @@ var _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-
 var workspaceDisplayTitle = function (title, localizedDefault) {
   return title === "default-workspace" ? (localizedDefault || "Default workspace") : title;
 };
+if (typeof window !== "undefined" && !window.__dshResizeObserverGuardInstalled) {
+  window.__dshResizeObserverGuardInstalled = true;
+  if (typeof window.ResizeObserver === "function") {
+    var NativeResizeObserver = window.ResizeObserver;
+    var SafeResizeObserver = function (callback) {
+      var rafId = 0;
+      var latestEntries = null;
+      var disconnected = false;
+      var observer = new NativeResizeObserver(function (entries, obs) {
+        if (disconnected) return;
+        latestEntries = entries;
+        if (rafId) return;
+        rafId = window.requestAnimationFrame(function () {
+          rafId = 0;
+          if (disconnected || !latestEntries) return;
+          var batch = latestEntries;
+          latestEntries = null;
+          callback(batch, obs);
+        });
+      });
+      var origObserve = observer.observe.bind(observer);
+      observer.observe = function () {
+        disconnected = false;
+        return origObserve.apply(observer, arguments);
+      };
+      var origDisconnect = observer.disconnect.bind(observer);
+      observer.disconnect = function () {
+        disconnected = true;
+        latestEntries = null;
+        if (rafId) {
+          window.cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+        return origDisconnect();
+      };
+      return observer;
+    };
+    SafeResizeObserver.prototype = NativeResizeObserver.prototype;
+    try { window.ResizeObserver = SafeResizeObserver; } catch (_e) {}
+  }
+  window.addEventListener("error", function (event) {
+    var msg = event && typeof event.message === "string" ? event.message : "";
+    if (msg.indexOf("ResizeObserver loop") !== -1) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+    }
+  }, true);
+}
+
 var clsx = function () {
   var out = [];
   for (var i = 0; i < arguments.length; i++) {
@@ -39,8 +88,13 @@ var clsx = function () {
 /*__BLOCK_GROUP_BAR__*/
 
 var CSS_EXTRA = [
-  String.raw`[data-dsh-harness-tabs-anchor]{flex:1 1 auto;min-width:0;display:flex;overflow:hidden;height:100%}`,
-  String.raw`.wSkVaW_titleRow{display:flex!important;align-items:center!important}`,
+  String.raw`.wSkVaW_header{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;column-gap:8px!important}`,
+  String.raw`.wSkVaW_headerLeading{grid-column:1!important;grid-row:1!important}`,
+  String.raw`.wSkVaW_header>[data-dsh-harness-tabs-anchor]{grid-column:2!important;grid-row:1!important;flex:1 1 auto;min-width:0;display:flex;align-items:center;overflow:hidden;height:34px;align-self:center}`,
+  String.raw`[data-dsh-harness-tabs-anchor]>[data-dsh-harness-portal="tabs-bar"]{display:flex;align-items:center;flex:1 1 auto;min-width:0;height:100%}`,
+  String.raw`.wSkVaW_header .wSkVaW_titleRow{grid-column:3!important;grid-row:1!important;flex:none!important;justify-content:flex-end!important;padding-inline-start:0!important;display:flex!important;align-items:center!important}`,
+  String.raw`.wSkVaW_header .wSkVaW_titleCluster{display:none!important}`,
+  String.raw`.wSkVaW_header .wSkVaW_viewTabs{grid-column:2 / -1!important;grid-row:2!important}`,
   // Hide the top-right session name (conversation header crumbs) — the tabs
   // already name every conversation.
   String.raw`.wSkVaW_crumbs{display:none!important}`,
@@ -48,15 +102,25 @@ var CSS_EXTRA = [
   // hide the header original, the dock portal mirrors it live.
   String.raw`.wSkVaW_headerActions [data-slot="conversation.session.header.actions"]{display:none!important}`,
   String.raw`[data-dsh-harness-portal="preset-seat-dock"]{display:inline-flex!important;align-items:center!important;height:100%!important;flex:0 0 auto!important;margin-right:8px}`,
-  // FIX 3 (revised): the native dsh layout already places 更多操作 / 打开侧边栏
-  // adjacent at the top-right, clearing the Windows caption buttons (~138px).
-  // But .wSkVaW_titleRow has overflow:hidden and dsh's headerCorner carried a
-  // -16px right margin that pushed the sidebar button past the clip edge, so its
-  // right half was clipped and clicks landed on the header instead of the button.
-  // Neutralise that negative margin (and any prior override) to zero: both buttons
-  // then sit inside the clip at x≈1196..1268, stay adjacent, and remain clickable.
+  // Keep right-side header utility controls cleanly inside the clip edge.
   String.raw`.wSkVaW_headerUtilities{margin-right:0!important}`,
   String.raw`.wSkVaW_headerCorner{margin-right:0!important}`,
+  // Lock header vertical geometry across blank (hero) and active sessions so switching never jumps the whole page up/down.
+  String.raw`.wSkVaW_header,.wSkVaW_header.wSkVaW_headerBlank,.wSkVaW_header:where(:not(:has(.wSkVaW_tabs))){min-height:54px!important;padding-top:10px!important;padding-bottom:10px!important;border-bottom-width:.5px!important;border-bottom-style:solid!important;transition:border-bottom-color .24s ease}`,
+  String.raw`.wSkVaW_header.wSkVaW_headerBlank{border-bottom-color:transparent!important}`,
+  // Prevent horizontal scrollbar flicker / jitter during session transitions.
+  String.raw`.wSkVaW_scrollBody{overflow-x:clip!important}`,
+  // Smooth, calm transitions for top tabs, left sidebar rows, preset seat, and composer stack.
+  String.raw`.wSkVaW_browserTab{transition:background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),color .2s ease,box-shadow .24s cubic-bezier(.22,1,.36,1)!important}`,
+  String.raw`.wSkVaW_browserTab:active:not(.wSkVaW_browserTabDragging){transform:none!important}`,
+  String.raw`.YDXeBa_sessionRow{transition:background-color .24s cubic-bezier(.22,1,.36,1),border-color .24s cubic-bezier(.22,1,.36,1),color .2s ease,box-shadow .24s cubic-bezier(.22,1,.36,1)!important}`,
+  String.raw`.cubgiG_seat{transition:background-color .22s cubic-bezier(.22,1,.36,1),color .2s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1),box-shadow .22s cubic-bezier(.22,1,.36,1)!important}`,
+  String.raw`.cubgiG_seatLabel{transition:opacity .2s ease,color .2s ease}`,
+  String.raw`.wSkVaW_heroWorkspaceRow button{transition:background-color .22s cubic-bezier(.22,1,.36,1),border-color .22s cubic-bezier(.22,1,.36,1),color .2s cubic-bezier(.22,1,.36,1),opacity .22s cubic-bezier(.22,1,.36,1)}`,
+  String.raw`.uV2eYG_card{transition:box-shadow .26s cubic-bezier(.22,1,.36,1),border-color .26s cubic-bezier(.22,1,.36,1),background-color .26s cubic-bezier(.22,1,.36,1),opacity .26s cubic-bezier(.22,1,.36,1)}`,
+  // Instant, zero-jitter session switches (no slide/fade/opacity dip on the main stage).
+  String.raw`.wSkVaW_root[data-phase="settling"] .wSkVaW_composerSeat,.wSkVaW_embeddedBody[data-content-phase="settling"] .wSkVaW_composerSeat{visibility:visible!important;opacity:1!important;margin-top:auto;position:sticky;bottom:0;transition:none!important}`,
+  String.raw`.wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody,.wSkVaW_root[data-phase="settling"] .wSkVaW_scrollBody .wSkVaW_viewArea,.wSkVaW_root[data-phase="active"] .wSkVaW_scrollBody{opacity:1!important;transition:none!important}`,
   // FIX 2b: solid top strip filled by the Electron shell with the native caption
   // colour, so the title bar and the page merge seamlessly (no colour block under
   // min/max/close). MUST use a NEGATIVE z-index: at z-index:0 this fixed strip
@@ -204,7 +268,8 @@ function usePanelInfo(selector) {
     return panelInfoStore.activePanelId;
   };
   var active = (0, react.useSyncExternalStore)(subscribe, getSnapshot, getSnapshot);
-  return { activePanelId: active };
+  var info = { activePanelId: active };
+  return typeof selector === "function" ? selector(info) : info;
 }
 
 // Legacy globals the ported blocks rely on.
@@ -217,26 +282,60 @@ globalThis.__dshSelectMainPanel = function (panelId) {
 };
 globalThis.__dshCreateNewTab = function (_opt, opts) {
   var helpers = resolveWorkspaceHelpers(svc.ctx || {});
-  var wsId = (opts && opts.workspaceId) || (helpers.workspaces[0] && helpers.workspaces[0].workspaceId);
+  var requestedWsId = opts && opts.workspaceId;
+  var matchedWs = requestedWsId && helpers.workspaces.find(function (w) { return w && w.workspaceId === requestedWsId; });
+  var liveFirstWs = helpers.workspaces.find(function (w) { return w && w.workspaceId && w.workspaceId !== "default-workspace"; });
+  var wsId = (matchedWs && matchedWs.workspaceId) || (liveFirstWs && liveFirstWs.workspaceId) || requestedWsId || void 0;
   var tabStore = getDshBrowserTabsStore();
+  var gStore = globalThis.__dshGroupHubStore;
+  if (!(opts && opts.roomId) && gStore && typeof gStore.leaveGroupRoom === "function") {
+    gStore.leaveGroupRoom();
+  }
+  var archivedSet = new Set((helpers.wsStore && helpers.wsStore.getSnapshot && (helpers.wsStore.getSnapshot().archivedSessionIds || [])) || []);
+  for (var wi = 0; wi < helpers.workspaces.length; wi++) {
+    var w = helpers.workspaces[wi];
+    var sids = Array.isArray(w && w.sessionIds) ? w.sessionIds.slice().reverse() : [];
+    for (var si = 0; si < sids.length; si++) {
+      var sid = sids[si];
+      if (sid && !archivedSet.has(sid) && !tabStore.closedIds.has(sid) && !tabStore.order.includes(sid)) {
+        tabStore.order.push(sid);
+      }
+    }
+  }
+  tabStore.noTabsHomeMode = false;
+  tabStore.homeStandbySessionId = void 0;
+  tabStore.awaitingStandbySession = false;
   var optKey = "__opt_tab_" + ++tabStore.seq;
+  var prevIds = new Set(helpers.list.ids || []);
   tabStore.optimisticTabs.set(optKey, {
+    id: optKey,
+    workspaceId: wsId,
     roomId: opts && opts.roomId,
-    title: opts && opts.title,
-    knownIds: new Set(helpers.list.ids || []),
+    title: (opts && opts.title) || "新会话",
+    knownIds: prevIds,
   });
   if (opts && opts.title) tabStore.customTitles.set(optKey, opts.title);
-  if (opts && opts.roomId) tabStore.noTabsHomeMode = false;
+  if (opts && opts.roomId) {
+    var roomTabId = "__room__:" + opts.roomId;
+    tabStore.closedIds.delete(roomTabId);
+    if (!tabStore.order.includes(roomTabId)) tabStore.order.push(roomTabId);
+    if (gStore && typeof gStore.bindSessionToRoom === "function") {
+      gStore.bindSessionToRoom(optKey, opts.roomId);
+    }
+  } else {
+    if (!tabStore.order.includes(optKey)) tabStore.order.push(optKey);
+  }
+  tabStore.optimisticActiveId = optKey;
   tabStore.emit(true);
-  // Mirror the rc.1 flow: create a REAL session (not a draft) so it appears in
-  // the sessions list; then bind the room and open it once the id surfaces.
+  globalThis.__dshSelectMainPanel(null);
   var uw = svc.uiWorkspace || {};
-  var prevIds = new Set(helpers.list.ids || []);
-  var prevSel = "";
-  try { prevSel = uw.selection.getSnapshot().sessionId || ""; } catch (_e) {}
   var created = null;
   try {
-    created = uw.startSession(wsId, {});
+    created = uw.startSession(wsId, {
+      ...(opts && opts.agentPreset ? { agentPreset: opts.agentPreset } : {}),
+      reuseBlank: false,
+      __fromCreateNewTab: true,
+    });
   } catch (e) {
     harnessLog("createNewTab.startSession", e);
   }
@@ -244,6 +343,12 @@ globalThis.__dshCreateNewTab = function (_opt, opts) {
   var unsubSess = null;
   var unsubSel = null;
   var timer = null;
+  function cleanupOptKey() {
+    if (tabStore.optimisticTabs.has(optKey)) tabStore.optimisticTabs.delete(optKey);
+    var oi = tabStore.order.indexOf(optKey);
+    if (oi !== -1) tabStore.order.splice(oi, 1);
+    if (tabStore.optimisticActiveId === optKey) tabStore.optimisticActiveId = void 0;
+  }
   function cleanupResolve() {
     if (timer) { clearInterval(timer); timer = null; }
     try { if (typeof unsubSess === "function") unsubSess(); } catch (_e) {}
@@ -259,14 +364,41 @@ globalThis.__dshCreateNewTab = function (_opt, opts) {
       var newId = ids.find(function (id) { return !prevIds.has(id); }) || null;
       var selId = "";
       try { selId = uw.selection.getSnapshot().sessionId || ""; } catch (_e) {}
-      if (!newId && selId && selId !== prevSel) newId = selId;
+      if (!newId && selId && !prevIds.has(selId)) newId = selId;
       if (newId) {
         resolved = true;
         cleanupResolve();
+        if (opts && opts.roomId && tabStore.closedIds.has("__room__:" + opts.roomId)) {
+          cleanupOptKey();
+          tabStore.closedIds.add(newId);
+          try {
+            if (uw.workspaces && typeof uw.workspaces.archiveSession === "function") {
+              uw.workspaces.archiveSession(newId).catch(function () {});
+            }
+          } catch (_e) {}
+          tabStore.emit(true);
+          return true;
+        }
+        var userStillAwaiting = tabStore.optimisticActiveId === optKey;
+        if (opts && opts.roomId && gStore && typeof gStore.bindSessionToRoom === "function") {
+          gStore.bindSessionToRoom(newId, opts.roomId);
+        }
         tabStore.resolveOptimisticTab(newId, optKey);
+        if (opts && opts.roomId) {
+          var rawIdx = tabStore.order.indexOf(newId);
+          if (rawIdx !== -1) tabStore.order.splice(rawIdx, 1);
+        }
         if (opts && opts.title) tabStore.setCustomTitle(newId, opts.title);
-        globalThis.__dshSelectMainPanel(null);
-        try { uw.openSession(newId); } catch (_e) {}
+        if (userStillAwaiting) {
+          tabStore.activeSessionId = newId;
+          globalThis.__dshActiveSessionId = newId;
+          globalThis.__dshMainRetainedSessionId = newId;
+          globalThis.__dshSelectMainPanel(null);
+          if (selId !== newId) {
+            try { uw.openSession(newId); } catch (_e) {}
+          }
+        }
+        tabStore.emit(true);
         return true;
       }
     } catch (_e) {}
@@ -284,8 +416,11 @@ globalThis.__dshCreateNewTab = function (_opt, opts) {
     var attempts = 0;
     timer = setInterval(function () {
       attempts += 1;
-      if (tryResolveNewTab() || attempts > 80) {
+      if (tryResolveNewTab()) return;
+      if (attempts > 80) {
         cleanupResolve();
+        cleanupOptKey();
+        tabStore.emit(true);
       }
     }, 40);
   }
@@ -381,23 +516,33 @@ function mountLuminexTheme() {
 // Generic MutationObserver portal: mounts a React node once the anchor shows
 // up in the DOM, re-mounts if it gets detached by re-renders.
 // ---------------------------------------------------------------------------
+// Direct, instant session switching — keep hook signature as a zero-reflow no-op.
+globalThis.__dshTriggerSessionTransition = function () {};
+
 var activePortals = [];
 function portalMount(options) {
   var host = null;
   var reactRoot = null;
+  function insertHost(anchor, el) {
+    if (options.anchorIndex === "append") anchor.appendChild(el);
+    else if (typeof options.anchorIndex === "number") {
+      var ref = anchor.children[Math.min(options.anchorIndex, anchor.children.length)];
+      anchor.insertBefore(el, ref || null);
+    } else anchor.appendChild(el);
+  }
   function tryMount() {
     if (host && host.isConnected && host.parentElement && host.parentElement.isConnected) return true;
     var anchor = options.findAnchor();
     if (!anchor) return false;
     if (host && host.isConnected && host.parentElement === anchor) return true;
+    if (options.preserveRoot && host && reactRoot) {
+      insertHost(anchor, host);
+      return true;
+    }
     unmount();
     host = document.createElement(options.hostTag || "div");
     host.setAttribute("data-dsh-harness-portal", options.name);
-    if (options.anchorIndex === "append") anchor.appendChild(host);
-    else if (typeof options.anchorIndex === "number") {
-      var ref = anchor.children[Math.min(options.anchorIndex, anchor.children.length)];
-      anchor.insertBefore(host, ref || null);
-    } else anchor.appendChild(host);
+    insertHost(anchor, host);
     reactRoot = react_dom.createRoot(host);
     reactRoot.render(
       react.createElement(HarnessErrorBoundary, { name: options.name }, options.render()),
@@ -450,24 +595,35 @@ function portalMount(options) {
 // ---------------------------------------------------------------------------
 function mountSidebarGroups(ctx) {
   var ROWS = Rows_module_css_default;
-  var store = getDshGroupHubStore();
+  getDshGroupHubStore();
+  function SidebarGroupsHost() {
+    var helpers = resolveWorkspaceHelpers(ctx);
+    var liveList = {
+      get byId() {
+        var snap = getSessionListSnapshot();
+        return (snap && snap.byId) || resolveWorkspaceHelpers(ctx).list.byId || {};
+      },
+    };
+    return react.createElement(DshWorkspaceGroupsAndScheduleSection, {
+      usePanelInfo: usePanelInfo,
+      workspaces: helpers.workspaces,
+      startSession: function (wsId, options) { return resolveWorkspaceHelpers(ctx).startSession(wsId, options); },
+      open: function (sid) { return resolveWorkspaceHelpers(ctx).open(sid); },
+      list: liveList,
+    });
+  }
   portalMount({
     name: "sidebar-groups",
     hostTag: "div",
+    anchorIndex: "append",
     render: function () {
-      var helpers = resolveWorkspaceHelpers(ctx);
-      var list = getSessionListSnapshot();
-      var byId = (list && list.byId) || {};
-      helpers.list = { byId: byId };
-      return react.createElement(DshWorkspaceGroupsAndScheduleSection, {
-        usePanelInfo: usePanelInfo,
-        workspaces: helpers.workspaces,
-        startSession: helpers.startSession,
-        open: helpers.open,
-        list: helpers.list,
-      });
+      return react.createElement(SidebarGroupsHost);
     },
     findAnchor: function () {
+      var listArea = document.querySelector('[class*="_listArea"]');
+      if (listArea) return listArea;
+      var treeBody = document.querySelector('[class*="_treeBody"]');
+      if (treeBody) return treeBody;
       var rows = document.querySelectorAll("." + ROWS.projectRow + ", ." + (ROWS.sessionRow || ""));
       if (!rows.length) return null;
       var el = rows[rows.length - 1];
@@ -492,41 +648,89 @@ function mountTabsBar(ctx) {
   };
   var storeSubscribe = function (ref) {
     return function (cb) {
-      try {
-        var st = ref();
-        if (st && typeof st.subscribe === "function") return st.subscribe(cb);
-      } catch (_e) {}
-      return function () {};
+      var unsub = null;
+      var poll = null;
+      var attach = function () {
+        try {
+          var st = ref();
+          if (st && typeof st.subscribe === "function") {
+            if (poll) { clearInterval(poll); poll = null; }
+            unsub = st.subscribe(cb);
+            cb();
+            return true;
+          }
+        } catch (_e) {}
+        return false;
+      };
+      if (!attach()) {
+        poll = setInterval(attach, 50);
+      }
+      return function () {
+        if (poll) { clearInterval(poll); poll = null; }
+        try { if (typeof unsub === "function") unsub(); } catch (_e) {}
+      };
     };
   };
+  var EMPTY_SESSIONS = { byId: {}, ids: [] };
+  var EMPTY_WORKSPACES = { items: [], archivedSessionIds: [] };
   var useSessions = serviceHook(function () {
     try {
       var st = sessStoreRef();
       var snap = st && st.getSnapshot();
-      return snap || { byId: {}, ids: [] };
-    } catch (_e) { return { byId: {}, ids: [] }; }
+      return snap || EMPTY_SESSIONS;
+    } catch (_e) { return EMPTY_SESSIONS; }
   }, storeSubscribe(sessStoreRef));
   var useWorkspaces = serviceHook(function () {
     try {
       var st = wsStoreRef();
       var snap = st && st.getSnapshot();
-      return snap || { items: [], archivedSessionIds: [] };
-    } catch (_e) { return { items: [], archivedSessionIds: [] }; }
+      return snap || EMPTY_WORKSPACES;
+    } catch (_e) { return EMPTY_WORKSPACES; }
   }, storeSubscribe(wsStoreRef));
   portalMount({
     name: "tabs-bar",
     hostTag: "div",
+    preserveRoot: true,
     render: function () {
-      var list = getSessionListSnapshot();
-      // Services arrive asynchronously after mount — resolve lazily per render
-      // so open/create never operate on the empty mount-time snapshot.
-      var liveHelpers = resolveWorkspaceHelpers(ctx);
       var openById = function (sessionId) {
         try {
+          if (!sessionId) return;
+          var tabStore = getDshBrowserTabsStore();
+          var gStore = globalThis.__dshGroupHubStore || (typeof getDshGroupHubStore === "function" ? getDshGroupHubStore() : null);
+          if (typeof sessionId === "string" && sessionId.indexOf("__room__:") === 0) {
+            var targetRoomId = sessionId.slice("__room__:".length);
+            if (targetRoomId && gStore && typeof gStore.enterGroupRoom === "function") {
+              var liveHelpersForRoom = resolveWorkspaceHelpers(ctx);
+              gStore.enterGroupRoom(targetRoomId, liveHelpersForRoom);
+            }
+            return;
+          }
           var uw = svc.uiWorkspace || {};
-          // Upstream switches the main conversation via uiWorkspace.openSession
-          // (replaceMain → reveal). selection.set is a replace-mode store write
-          // and does not drive the conversation panel — tabs must mirror the sidebar.
+          var sessSnap = uw.sessions && uw.sessions.list && uw.sessions.list.getSnapshot && uw.sessions.list.getSnapshot();
+          if (sessSnap && sessSnap.byId && !sessSnap.byId[sessionId]) {
+            var staleIdx = tabStore.order.indexOf(sessionId);
+            if (staleIdx !== -1) tabStore.order.splice(staleIdx, 1);
+            tabStore.emit(true);
+            return;
+          }
+          var currentSel = uw.selection && uw.selection.getSnapshot && uw.selection.getSnapshot();
+          var prevId = (currentSel && currentSel.sessionId) || tabStore.activeSessionId || globalThis.__dshActiveSessionId;
+          tabStore.noTabsHomeMode = false;
+          tabStore.optimisticActiveId = void 0;
+          tabStore.closedIds.delete(sessionId);
+          tabStore.activeSessionId = sessionId;
+          globalThis.__dshActiveSessionId = sessionId;
+          globalThis.__dshMainRetainedSessionId = sessionId;
+          if (prevId && prevId !== sessionId && typeof globalThis.__dshTriggerSessionTransition === "function") {
+            globalThis.__dshTriggerSessionTransition(prevId, sessionId, "tabs");
+          }
+          tabStore.emit(true);
+          if (gStore && typeof gStore.syncActiveTabSession === "function") {
+            gStore.syncActiveTabSession(sessionId);
+          }
+          if (typeof globalThis.__dshSelectMainPanel === "function") {
+            globalThis.__dshSelectMainPanel(null);
+          }
           if (typeof uw.openSession === "function") return uw.openSession(sessionId);
           var sel = uw.selection;
           if (sel && typeof sel.set === "function") return sel.set({ sessionId: sessionId });
@@ -536,56 +740,130 @@ function mountTabsBar(ctx) {
         }
       };
       return react.createElement(BrowserTaskTabsBar, {
-        sessionId: globalThis.__dshActiveSessionId || void 0,
+        sessionId: void 0,
         useSessions: useSessions,
         useWorkspaces: useWorkspaces,
         open: openById,
         createNewTab: function (opt, opts) {
-          liveHelpers.startSession((opts && opts.workspaceId) || liveHelpers.workspaces[0] && liveHelpers.workspaces[0].workspaceId, {});
+          return globalThis.__dshCreateNewTab(opt, opts);
         },
         closeTab: function (id, currentTabIds, activeSessionId) {
           var tabStore = getDshBrowserTabsStore();
-          var liveHelpers = resolveWorkspaceHelpers(svc.ctx || {});
+          var gStore = globalThis.__dshGroupHubStore;
+          var uw = svc.uiWorkspace || {};
+          var isRoomTab = typeof id === "string" && id.indexOf("__room__:") === 0;
+          var roomId = isRoomTab ? id.slice("__room__:".length) : null;
+          var isOptTab = typeof id === "string" && id.indexOf("__opt_tab_") === 0;
           tabStore.closedIds.add(id);
+          if (isRoomTab && roomId) {
+            tabStore.optimisticTabs.forEach(function (meta, optKey) {
+              if (meta && meta.roomId === roomId) {
+                tabStore.optimisticTabs.delete(optKey);
+                if (tabStore.optimisticActiveId === optKey) tabStore.optimisticActiveId = void 0;
+              }
+            });
+            if (gStore) {
+              var boundSid = gStore.roomSessionMap && gStore.roomSessionMap[roomId];
+              if (boundSid) {
+                tabStore.closedIds.add(boundSid);
+                if (typeof gStore.unbindSession === "function") gStore.unbindSession(boundSid);
+                if (String(boundSid).indexOf("__opt_tab_") !== 0) {
+                  try {
+                    if (uw.workspaces && typeof uw.workspaces.archiveSession === "function") {
+                      uw.workspaces.archiveSession(boundSid).catch(function () {});
+                    }
+                  } catch (_e) {}
+                }
+              }
+            }
+          } else {
+            if (gStore && typeof gStore.unbindSession === "function") {
+              gStore.unbindSession(id);
+            }
+            if (!isOptTab && id) {
+              try {
+                if (uw.workspaces && typeof uw.workspaces.archiveSession === "function") {
+                  uw.workspaces.archiveSession(id).catch(function () {});
+                }
+              } catch (_e) {}
+            }
+          }
+          if (tabStore.optimisticTabs.has(id)) {
+            tabStore.optimisticTabs.delete(id);
+            if (tabStore.optimisticActiveId === id) tabStore.optimisticActiveId = void 0;
+          }
           var oi = tabStore.order.indexOf(id);
           if (oi !== -1) tabStore.order.splice(oi, 1);
           var list = Array.isArray(currentTabIds) ? currentTabIds.slice() : tabStore.order.slice();
           var remaining = list.filter(function (t) {
             return t !== id && !tabStore.closedIds.has(t) && String(t).indexOf("__opt_tab_") !== 0;
           });
-          var isActive = id === (activeSessionId || tabStore.activeSessionId || "");
+          var isActive = isRoomTab
+            ? Boolean((gStore && gStore.activeRoomMode && gStore.activeRoomId === roomId) || id === activeSessionId)
+            : id === (activeSessionId || tabStore.activeSessionId || globalThis.__dshMainRetainedSessionId || "");
           if (isActive) {
+            if (isRoomTab && gStore && typeof gStore.leaveGroupRoom === "function") {
+              gStore.leaveGroupRoom();
+            }
             if (remaining.length > 0) {
-              // Browser-like: hand focus to the nearest surviving tab.
               var closedIdx = list.indexOf(id);
               var pick = remaining[Math.max(0, Math.min(closedIdx === -1 ? remaining.length - 1 : closedIdx, remaining.length - 1))];
-              try { liveHelpers.open(pick); } catch (e) { harnessLog("closeTab.open", e); }
+              try { openById(pick); } catch (e) { harnessLog("closeTab.open", e); }
             } else {
-              // Closed the last tab: open a fresh draft session (new-tab page).
+              tabStore.noTabsHomeMode = true;
+              tabStore.activeSessionId = "";
+              tabStore.optimisticActiveId = void 0;
+              globalThis.__dshActiveSessionId = void 0;
+              globalThis.__dshMainRetainedSessionId = void 0;
               try {
-                liveHelpers.startSession(liveHelpers.workspaces[0] && liveHelpers.workspaces[0].workspaceId, {});
-              } catch (e) { harnessLog("closeTab.startSession", e); }
+                if (typeof uw.clearMain === "function") uw.clearMain();
+              } catch (e) { harnessLog("closeTab.clearMain", e); }
             }
           }
           tabStore.emit(true);
         },
         renameTab: function (id, title) {
-          getDshBrowserTabsStore().setCustomTitle(id, title);
+          var trimmed = (title || "").trim();
+          if (!trimmed) return;
+          var tabStore = getDshBrowserTabsStore();
+          tabStore.setCustomTitle(id, trimmed);
+          if (tabStore.optimisticTabs.has(id)) return;
+          try {
+            var sess = (svc.uiWorkspace && svc.uiWorkspace.sessions) || svc.sessions;
+            if (sess && typeof sess.using === "function") {
+              sess.using(id, { source: "workspaceOperation" }, function (reference) {
+                return reference.binding.session.rename(trimmed);
+              }).catch(function () {});
+            }
+          } catch (_e) {}
         },
         tWorkspace: function (k) {
+          try {
+            if (svc.locale && typeof svc.locale.bind === "function") {
+              var v = svc.locale.bind("workspace")(k);
+              if (v && v !== k) return v;
+            }
+          } catch (_e) {}
+          if (k === "session.new") return "新会话";
+          if (k === "workspace.defaultName") return "默认工作区";
           return k;
         },
       });
     },
     findAnchor: function () {
       var cls = ConversationRoot_module_css_default;
-      var titleRow = document.querySelector('.' + cls.titleRow.split(' ')[0]);
-      if (!titleRow) return null;
-      var existing = titleRow.querySelector(':scope > [data-dsh-harness-portal="tabs-bar"]');
-      if (existing) return existing.parentElement;
-      var wrapper = document.createElement('div');
-      wrapper.setAttribute('data-dsh-harness-tabs-anchor', '1');
-      titleRow.insertBefore(wrapper, titleRow.firstChild);
+      var headerCls = (cls.header || "wSkVaW_header").split(" ")[0];
+      var header = document.querySelector("header." + headerCls);
+      if (!header) return null;
+      var wrapper = header.querySelector(':scope > [data-dsh-harness-tabs-anchor="1"]');
+      if (!wrapper) {
+        wrapper = document.createElement("div");
+        wrapper.setAttribute("data-dsh-harness-tabs-anchor", "1");
+        var leadingCls = (cls.headerLeading || "wSkVaW_headerLeading").split(" ")[0];
+        var leading = header.querySelector(":scope > ." + leadingCls);
+        if (leading && leading.nextSibling) header.insertBefore(wrapper, leading.nextSibling);
+        else header.appendChild(wrapper);
+      }
       return wrapper;
     },
   });
@@ -650,6 +928,7 @@ function mountPresetSeatDock() {
   portalMount({
     name: "preset-seat-dock",
     hostTag: "span",
+    preserveRoot: true,
     render: function () {
       return react.createElement(PresetSeatMirror);
     },
@@ -701,12 +980,12 @@ function useActiveSessionId() {
 
 function GroupRoomBarHost() {
   var sessionId = useActiveSessionId();
-  var gStore = globalThis.__dshGroupHubStore;
+  var gStore = typeof getDshGroupHubStore === "function" ? getDshGroupHubStore() : globalThis.__dshGroupHubStore;
   var gRev = react.useSyncExternalStore(
     function (cb) { try { return gStore.subscribe(cb); } catch (_e) { return function () {}; } },
     function () { try { return gStore.getSnapshot(); } catch (_e) { return 0; } }
   );
-  var tabStore = globalThis.__dshBrowserTabsStore;
+  var tabStore = typeof getDshBrowserTabsStore === "function" ? getDshBrowserTabsStore() : globalThis.__dshBrowserTabsStore;
   var tRev = react.useSyncExternalStore(
     function (cb) { try { return tabStore.subscribe(cb); } catch (_e) { return function () {}; } },
     function () { try { return tabStore.getSnapshot(); } catch (_e) { return 0; } }
@@ -748,19 +1027,44 @@ function mountConversationInsets(ctx) {
       );
     };
     renderHosts();
-    var lastL = -1, lastW = -1, lastT = -1, lastVisible = false;
+    var lastL = -1, lastW = -1, lastT = -1, lastVisible = false, lastSb = null;
     barHost.style.position = 'fixed';
-    barHost.style.zIndex = '35';
+    barHost.style.zIndex = '15';
+    barHost.style.pointerEvents = 'none';
+    barHost.style.visibility = 'hidden';
     drawerHost.style.position = 'fixed';
     drawerHost.style.zIndex = '60';
     var syncLoop = function () {
       try {
         var sb = document.querySelector('[data-conversation-scroll], [class*="wSkVaW_scrollBody"]');
+        if (lastSb && lastSb !== sb) {
+          if (lastSb.style && lastSb.style.paddingTop) lastSb.style.paddingTop = '';
+          lastSb = null;
+        }
         if (sb) {
+          lastSb = sb;
           var r = sb.getBoundingClientRect();
-          var nl = Math.round(r.left);
-          var nw = Math.round(r.width);
-          var nt = Math.round(r.top);
+          var leftInset = 16;
+          var rightInset = 16;
+          var topInset = 14;
+          var nl = Math.round(r.left) + leftInset;
+          var maxRight = Math.round(r.right) - rightInset;
+          var nt = Math.round(r.top) + topInset;
+          if (document.body && document.body.getAttribute('data-dsh-theme-id') === 'preset-1') {
+            var toggleEl = document.getElementById('dsh-corner-pull-toggle');
+            if (toggleEl) {
+              var tr = toggleEl.getBoundingClientRect();
+              if (tr.width > 0 && tr.height > 0) {
+                var besideRight = Math.floor(tr.left) - 12;
+                if (besideRight - nl >= 420) {
+                  maxRight = Math.min(maxRight, besideRight);
+                } else {
+                  nt = Math.max(nt, Math.ceil(tr.bottom) + 8);
+                }
+              }
+            }
+          }
+          var nw = Math.max(240, maxRight - nl);
           if (!lastVisible) {
             barHost.style.display = 'block';
             drawerHost.style.display = 'block';
@@ -775,10 +1079,13 @@ function mountConversationInsets(ctx) {
             barHost.style.top = nt + 'px';
           }
           var barH = barHost.firstElementChild ? barHost.offsetHeight : 0;
-          var targetPad = barH > 0 ? barH + 'px' : '';
-          if (sb.style.paddingTop !== targetPad) sb.style.paddingTop = targetPad;
+          barHost.style.visibility = barH > 0 ? 'visible' : 'hidden';
+          barHost.style.pointerEvents = 'none';
+          if (sb.style.paddingTop) sb.style.paddingTop = '';
         } else if (lastVisible) {
           barHost.style.display = 'none';
+          barHost.style.visibility = 'hidden';
+          barHost.style.pointerEvents = 'none';
           drawerHost.style.display = 'none';
           lastVisible = false;
         }
@@ -1010,11 +1317,17 @@ function apply(ctx) {
               var uwNow = svc.uiWorkspace || {};
               var snap = uwNow.selection && uwNow.selection.getSnapshot && uwNow.selection.getSnapshot();
               var id = (snap && snap.sessionId) || "";
-              if (id && tabsStore.activeSessionId !== id) {
-                // One conversation = one tab: re-opening a conversation from the
-                // sidebar restores its tab even if the tab was closed earlier.
-                if (tabsStore.closedIds.has(id)) tabsStore.closedIds.delete(id);
+              if (id && (tabsStore.activeSessionId !== id || globalThis.__dshMainRetainedSessionId !== id || tabsStore.optimisticActiveId !== void 0)) {
+                var gStoreNow = globalThis.__dshGroupHubStore;
+                var boundRoomNow = gStoreNow && typeof gStoreNow.getRoomForSession === "function" ? gStoreNow.getRoomForSession(id) : null;
+                var orderKeyNow = boundRoomNow ? ("__room__:" + boundRoomNow) : id;
+                if (tabsStore.closedIds.has(orderKeyNow)) tabsStore.closedIds.delete(orderKeyNow);
+                if (!boundRoomNow && tabsStore.closedIds.has(id)) tabsStore.closedIds.delete(id);
+                if (!tabsStore.order.includes(orderKeyNow)) tabsStore.order.push(orderKeyNow);
+                tabsStore.optimisticActiveId = void 0;
                 tabsStore.activeSessionId = id;
+                globalThis.__dshActiveSessionId = id;
+                globalThis.__dshMainRetainedSessionId = id;
                 tabsStore.emit(true);
               }
             } catch (_e2) {}
@@ -1023,18 +1336,26 @@ function apply(ctx) {
           if (sel && typeof sel.subscribe === "function" && !tabsStore.__selectionBound) {
             tabsStore.__selectionBound = true;
             syncActiveSession();
-            sel.subscribe(function (snap) {
-              var id = "";
-              try { id = (snap && snap.sessionId) || ""; } catch (_e1) {}
-              if (id && tabsStore.activeSessionId !== id) {
-                if (tabsStore.closedIds.has(id)) tabsStore.closedIds.delete(id);
-                tabsStore.activeSessionId = id;
-                tabsStore.emit(true);
-              }
+            sel.subscribe(function () {
+              syncActiveSession();
+            });
+          }
+          var sessList = host.uiWorkspace && host.uiWorkspace.sessions && host.uiWorkspace.sessions.list;
+          if (sessList && typeof sessList.subscribe === "function" && !tabsStore.__sessListBound) {
+            tabsStore.__sessListBound = true;
+            sessList.subscribe(function () {
+              tabsStore.emit();
+            });
+          }
+          var wsList = host.uiWorkspace && host.uiWorkspace.workspaces && host.uiWorkspace.workspaces.list;
+          if (wsList && typeof wsList.subscribe === "function" && !tabsStore.__wsListBound) {
+            tabsStore.__wsListBound = true;
+            wsList.subscribe(function () {
+              tabsStore.emit();
             });
           }
           if (!tabsStore.__activePoll) {
-            tabsStore.__activePoll = setInterval(syncActiveSession, 800);
+            tabsStore.__activePoll = setInterval(syncActiveSession, 400);
           }
         } catch (e) {
           harnessLog("tabs-active-sync", e);
@@ -1075,7 +1396,7 @@ function apply(ctx) {
   } catch (e) {
     harnessLog("nav-sidebar-toggle", e);
   }
-  if (FLAGS.insets === true) try {
+  if (FLAGS.insets !== false) try {
     mountConversationInsets(ctx);
   } catch (e) {
     harnessLog("conversation-insets", e);

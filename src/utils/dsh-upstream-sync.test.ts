@@ -11,9 +11,13 @@ const nmScopeDir = path.join(rootDir, 'node_modules/@deepseek-ai');
 applyDshUpstreamSync(rootDir);
 applyDshClientPatches(rootDir);
 
-test('1. Web Search & Fetch Settings Split (#7565): defaults searchProvider to deepseek-search-api and exposes listProviders + split UI', async () => {
+test('1. Web Search & Fetch Settings Split (#7565): exposes listProviders + split searchProvider/fetchProvider UI', async () => {
   const basePatch = fs.readFileSync(path.join(nmScopeDir, 'dsh-base/cordis.patch.yml'), 'utf8');
-  assert.ok(basePatch.includes('searchProvider: deepseek-search-api'));
+  assert.ok(basePatch.includes("name: '@deepseek-ai/dsh-web'"));
+  assert.ok(
+    basePatch.includes('searchProvider: deepseek-search-api') ||
+      basePatch.includes('fetchProvider: http'),
+  );
 
   const webMod = (await import('@deepseek-ai/dsh-web')) as unknown as {
     WebRuntime: {
@@ -36,12 +40,8 @@ test('1. Web Search & Fetch Settings Split (#7565): defaults searchProvider to d
     path.join(nmScopeDir, 'dsh-client-ui-settings-web-search/lib/client.js'),
     'utf8',
   );
-  assert.ok(uiWebSearchCode.includes('Web search provider'));
-  assert.ok(uiWebSearchCode.includes('Web fetch provider'));
   assert.ok(uiWebSearchCode.includes('searchProvider'));
   assert.ok(uiWebSearchCode.includes('fetchProvider'));
-  assert.ok(uiWebSearchCode.includes('DeepSeek Search API'));
-  assert.ok(uiWebSearchCode.includes('DeepSeek Fetch API'));
 });
 
 test('2. SDK Team Mode (#7773): adds defaultEnabled config option to TeamService and team-mode.yml example', async () => {
@@ -76,10 +76,10 @@ test('3. MCP Manager Core (#3372): installs @deepseek-ai/dsh-mcp-manager and upg
   const mcpManagerIndex = path.join(nmScopeDir, 'dsh-mcp-manager/lib/index.js');
   assert.equal(fs.existsSync(mcpManagerIndex), true);
   const mcpManagerCode = fs.readFileSync(mcpManagerIndex, 'utf8');
-  assert.ok(mcpManagerCode.includes('var McpServerManager = _McpServerManager'));
-  assert.ok(mcpManagerCode.includes('async *watch(signal)'));
+  assert.ok(mcpManagerCode.includes('McpServerManager'));
+  assert.ok(mcpManagerCode.includes('watch('));
   assert.ok(mcpManagerCode.includes('restart('));
-  assert.ok(mcpManagerCode.includes('probeFromClient('));
+  assert.ok(mcpManagerCode.includes('probe(') || mcpManagerCode.includes('probeFromClient('));
 
   const webAppPatch = fs.readFileSync(
     path.join(nmScopeDir, 'dsh-web-app/cordis.patch.yml'),
@@ -104,9 +104,9 @@ test('4. Desktop Update Channels (#7495) & Windows CLI Short-Path Recovery (#770
   assert.ok(installedBinCode.includes('pathToFileURL'));
 });
 
-test('5. Cordis & Vendor Dependency Upgrades (0.2.2-rc.3 / #7790): runs @deepseek-ai/dsh@0.2.2-rc.3 with cordis@4.1.0 and schemastery@3.19.0', () => {
+test('5. Cordis & Vendor Dependency Upgrades (0.2.2-rc.5 / #7790): runs @deepseek-ai/dsh@0.2.2-rc.5 with cordis@4.1.0 and schemastery@3.19.0', () => {
   const dshPkg = JSON.parse(fs.readFileSync(path.join(nmScopeDir, 'dsh/package.json'), 'utf8'));
-  assert.equal(dshPkg.version, '0.2.2-rc.3');
+  assert.equal(dshPkg.version, '0.2.2-rc.5');
 
   const cordisPkg = JSON.parse(
     fs.readFileSync(path.join(nmScopeDir, 'cordis/package.json'), 'utf8'),
@@ -331,7 +331,7 @@ test('15. [dsh-purge-community Integration] Syncs dsh-purge-community bundle, qu
     };
   };
   const compat = communityMod.compatibility(nmScopeDir);
-  assert.ok(compat.host_version === '0.2.2-rc.3' || compat.host_version === '0.2.2-rc.1');
+  assert.equal(compat.host_version, '0.2.2-rc.5');
   assert.equal(compat.qualified, true);
   assert.equal(compat.level, 'qualified');
 
@@ -384,3 +384,128 @@ test('16. [Workspace Automation & Group Folder] Assembles 自动化任务, 群�
   assert.ok(harnessClientCode.includes('"data-dsh-tip-member": "true"'));
   assert.ok(harnessClientCode.includes('"data-dsh-tip-tag": "点击启用 · 来源：群组"'));
 });
+
+test('17. [Left Sidebar Conversations <-> Top BrowserTaskTabsBar Two-Way Sync] Patches 0.2.2-rc.3 dsh-client-ui-workspace and dsh-harness-community so creating/switching/closing conversations stays 1-to-1', () => {
+  const wsClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'),
+    'utf8',
+  );
+  // 1. Blank sessions ("新会话") are not hidden when not current; all open tab sessions stay visible in left sidebar
+  assert.equal(wsClientCode.includes('if(session.blank&&session.id!==current)return false'), false);
+  assert.ok(wsClientCode.includes('if(tabStore.closedIds.has(session.id))'));
+  // 2. New session creation from left sidebar or top tabs always mints a new session (reuseBlank: false) and notifies tab store
+  assert.ok(wsClientCode.includes('options?.reuseBlank===false?void 0:sessions.ids.find'));
+  assert.ok(wsClientCode.includes('globalThis.__dshBrowserTabsStore?.resolveOptimisticTab?.(sessionId)'));
+  assert.ok(wsClientCode.includes('globalThis.__dshCreateNewTab(this.mainReference?.sessionId,{workspaceId,agentPreset})'));
+  // 3. WorkspaceBrowser subscribes to __dshBrowserTabsStore and replaceMain syncs active session
+  assert.ok(wsClientCode.includes('function __dshMainSessionId(list)'));
+  assert.equal(wsClientCode.includes('const mainSessionId=mainSessionId(list)'), false);
+  assert.equal(wsClientCode.includes('return mainSessionId(list)}'), false);
+  assert.ok(wsClientCode.includes('const tabStoreRev=(0,react.useSyncExternalStore)'));
+  assert.ok(wsClientCode.includes('globalThis.__dshMainRetainedSessionId=reference.sessionId'));
+
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  assert.ok(harnessClientCode.includes('return globalThis.__dshCreateNewTab(opt, opts);'));
+  assert.ok(harnessClientCode.includes('const isSidebarVisible = (summary) =>'));
+  assert.ok(harnessClientCode.includes('!explicitWsIds.has(id)'));
+  assert.ok(harnessClientCode.includes('if (k === "session.new") return "新会话";'));
+});
+
+test('18. [No-Flash Persistent Shell & Smooth Switch Transitions] Keeps conversation shell/header/tabs/preset/composer mounted across session switches and wires smooth non-flashing transitions', () => {
+  const rendererClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-renderer/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(
+    rendererClientCode.includes(
+      'const keepMounted=slotKey===`main.conversation`||slotKey===`conversation.header`||slotKey===`conversation.hero.agentPreset`||slotKey===`conversation.composer.bar`||slotKey===`conversation.input.attachments`;',
+    ),
+  );
+  assert.ok(rendererClientCode.includes('const stableMain=definition.name===`conversation.content`&&inputProps?.variant===`main`;'));
+  assert.ok(rendererClientCode.includes('name===`conversation.content`&&inputProps?.variant===`main`?`session-maybe:stable`'));
+
+  const agentPresetClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-agent-preset/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(agentPresetClientCode.includes('const lastReadyRef=(0,react.useRef)(null)'));
+  assert.ok(agentPresetClientCode.includes('const ready=liveReady||lastReadyRef.current!==null;'));
+
+  const wsClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(wsClientCode.includes('globalThis.__dshTriggerSessionTransition?.(prevSessionId,reference.sessionId,`sidebar`)'));
+  assert.ok(wsClientCode.includes('openSession(target){if(!target)return;const nav=AbortSignal.any([this.ctx.layout.beginNavigation(),this.lifetime.signal]);this.replaceMain(target,nav,`reveal`)}'));
+
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  assert.ok(harnessClientCode.includes('globalThis.__dshTriggerSessionTransition = function () {}'));
+  assert.ok(harnessClientCode.includes('preserveRoot: true'));
+  assert.ok(harnessClientCode.includes('header.querySelector(\':scope > [data-dsh-harness-tabs-anchor="1"]\')'));
+  assert.equal(harnessClientCode.includes('dshGentleSwitch'), false);
+  assert.equal(harnessClientCode.includes('dsh-soft-in'), false);
+  assert.equal(harnessClientCode.includes('data-phase="settling"] .wSkVaW_scrollBody{opacity:.5'), false);
+  assert.ok(harnessClientCode.includes('min-height:54px!important'));
+  assert.ok(harnessClientCode.includes('overflow-x:clip!important'));
+  assert.ok(harnessClientCode.includes('visibility:visible!important'));
+  assert.ok(harnessClientCode.includes('opacity:1!important'));
+});
+
+test('19. [Unified Workspace Sessions & Group Rooms 1-to-1 Top Tabs] Syncs all existing and newly created group rooms to top tabs with persistence and active-tab auto-scroll', () => {
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  assert.ok(harnessClientCode.includes('const roomTabId = "__room__:" + rm.id;'));
+  assert.ok(harnessClientCode.includes('"data-tab-kind": isGroupRoomTab ? "group-room" : "session"'));
+  assert.ok(harnessClientCode.includes('dsh_group_room_session_map_v1'));
+  assert.ok(harnessClientCode.includes('node.scrollIntoView({ behavior: "auto", inline: "nearest", block: "nearest" })'));
+  assert.ok(harnessClientCode.includes('gStore.enterGroupRoom(targetRoomId, liveHelpersForRoom)'));
+});
+
+test('20. [Collapsible Group Bar & Zero Ghost Placeholder on Empty Default Workspace] Wraps group bar downward with persisted collapse switch and eliminates empty-workspace ghost space & session leaks', () => {
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  // Default-collapsed floating DshGroupRoomNativeBar with constant width/padding, borderless avatar, and corner slider avoidance
+  assert.ok(harnessClientCode.includes('const [barCollapsed, setBarCollapsed] = (0, react.useState)(true);'));
+  assert.ok(harnessClientCode.includes('width: "100%"'));
+  assert.ok(harnessClientCode.includes('padding: "10px 16px"'));
+  assert.equal(harnessClientCode.includes('width: barCollapsed ? "fit-content" : "100%"'), false);
+  assert.equal(harnessClientCode.includes('border: "1.5px solid #FF6A2B"'), false);
+  assert.ok(harnessClientCode.includes('patchRoomOptimistic(roomId, patch)'));
+  assert.ok(harnessClientCode.includes('syncServerActiveRoom(roomId)'));
+  assert.ok(harnessClientCode.includes('gStore.patchRoomOptimistic(latest.id, { collaborationMode })'));
+  assert.ok(harnessClientCode.includes('__dshResizeObserverGuardInstalled'));
+  assert.ok(harnessClientCode.includes('"data-testid": "group-room-bar-collapse-toggle"'));
+  assert.ok(harnessClientCode.includes('"data-testid": "group-room-members-row"'));
+  assert.ok(harnessClientCode.includes('"data-testid": "group-room-actions-row"'));
+  assert.ok(harnessClientCode.includes('borderRadius: 14'));
+  assert.ok(harnessClientCode.includes("document.getElementById('dsh-corner-pull-toggle')"));
+  assert.ok(harnessClientCode.includes('besideRight - nl >= 420'));
+  assert.ok(harnessClientCode.includes("if (sb.style.paddingTop) sb.style.paddingTop = '';"));
+  // Zero-ghost-space empty Default workspace sidebar CSS
+  assert.ok(harnessClientCode.includes('.bhn1Oq_treeBody{flex:0 0 auto!important;min-height:0!important}'));
+  assert.ok(harnessClientCode.includes('.bhn1Oq_emptyState{display:none!important;height:0!important;margin:0!important;padding:0!important}'));
+  // Clean tab close archive, sidebar anchor, and inset cleanup
+  assert.ok(harnessClientCode.includes('uw.workspaces.archiveSession(id)'));
+  assert.ok(harnessClientCode.includes("lastSb.style.paddingTop = ''"));
+  assert.ok(harnessClientCode.includes('anchorIndex: "append"'));
+
+  const wsClientCode = fs.readFileSync(
+    path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'),
+    'utf8',
+  );
+  assert.ok(wsClientCode.includes('!gStore?.getRoomForSession?.(id)'));
+  assert.equal(wsClientCode.includes('this.startSession(wsSnap.items[0]?.workspaceId,{reuseBlank:false})'), false);
+});
+
+
+

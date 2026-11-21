@@ -5,6 +5,7 @@ import {
   reorderTabsByCenter,
   computeTabWheelScrollLeft,
   deriveVisibleTabIds,
+  resolveSessionSwitchDirection,
 } from './browser-tabs-logic';
 
 test('clampTabDragDx strictly bounds horizontal movement within container', () => {
@@ -137,3 +138,118 @@ test('deriveVisibleTabIds keeps an opened tab whose session summary is missing f
   });
   assert.deepEqual(closed.visibleTabIds, ['s2']);
 });
+
+test('resolveSessionSwitchDirection chooses horizontal glide for tabs, vertical glide for sidebar, and fade-up fallback', () => {
+  const order = ['s1', 's2', 's3'];
+  assert.equal(resolveSessionSwitchDirection(order, 's1', 's3', 'tabs'), 'slide-left');
+  assert.equal(resolveSessionSwitchDirection(order, 's3', 's1', 'tabs'), 'slide-right');
+  assert.equal(resolveSessionSwitchDirection(order, 's1', 's2', 'sidebar'), 'slide-up');
+  assert.equal(resolveSessionSwitchDirection(order, 's3', 's2', 'sidebar'), 'slide-down');
+  assert.equal(resolveSessionSwitchDirection(order, 's1', 's1', 'tabs'), 'fade-up');
+  assert.equal(resolveSessionSwitchDirection(order, undefined, 's2', 'tabs'), 'fade-up');
+  assert.equal(resolveSessionSwitchDirection(order, 's1', 'unknown', 'sidebar'), 'fade-up');
+  assert.equal(resolveSessionSwitchDirection(order, 's1', 's2', 'other'), 'fade-up');
+});
+
+test('reconcileStrictSidebarTabs enforces exact 1-to-1 parity with left sidebar and prunes ghost/group/deleted tabs', async () => {
+  const { reconcileStrictSidebarTabs } = await import('./browser-tabs-logic');
+  const result = reconcileStrictSidebarTabs({
+    workspaces: [{ workspaceId: 'ws-1', path: '/ws', sessionIds: ['s1', 's2', 's_deleted'] }],
+    allSessionIds: ['s1', 's2', 's_extra', 's_group', 's_sub', 's_stray_blank', 's_stray_real'],
+    archivedSessionIds: [],
+    byId: {
+      s1: { id: 's1', blank: false, cwd: '/ws' },
+      s2: { id: 's2', blank: true, cwd: '/ws' },
+      s_extra: { id: 's_extra', blank: true, cwd: '/ws' },
+      s_group: { id: 's_group', blank: false, cwd: '/ws' },
+      s_sub: { id: 's_sub', blank: false, origin: 'subagent', cwd: '/ws' },
+      s_stray_blank: { id: 's_stray_blank', blank: true, cwd: '/other' },
+      s_stray_real: { id: 's_stray_real', blank: false, cwd: '/other' },
+    },
+    closedIds: new Set<string>(),
+    groupSessionIds: new Set(['s_group']),
+    existingOrder: ['s_ghost_from_order', 's2', 's1'],
+  });
+
+  // Preserves existing order (s2 before s1), includes cwd-matched blank s_extra and non-blank stray s_stray_real,
+  // and strictly prunes deleted, ghost, group-room backing session, subagent, and stray blank sessions.
+  assert.deepEqual(result, ['s2', 's1', 's_extra', 's_stray_real']);
+});
+
+test('reconcileStrictSidebarTabs unifies workspace sessions and group rooms 1-to-1 without duplicating backing sessions', async () => {
+  const { reconcileStrictSidebarTabs, makeGroupRoomTabId, parseGroupRoomTabId, resolveEffectiveActiveTabId } =
+    await import('./browser-tabs-logic');
+
+  assert.equal(makeGroupRoomTabId('room-core-collab'), '__room__:room-core-collab');
+  assert.equal(parseGroupRoomTabId('__room__:room-core-collab'), 'room-core-collab');
+  assert.equal(parseGroupRoomTabId('session-123'), null);
+
+  const initial = reconcileStrictSidebarTabs({
+    workspaces: [{ workspaceId: 'ws-1', path: '/ws', sessionIds: ['s1', 's_room_backing'] }],
+    allSessionIds: ['s1', 's_room_backing'],
+    archivedSessionIds: [],
+    byId: {
+      s1: { id: 's1', blank: false, cwd: '/ws' },
+      s_room_backing: { id: 's_room_backing', blank: false, cwd: '/ws' },
+    },
+    closedIds: new Set<string>(),
+    groupSessionIds: new Set(['s_room_backing']),
+    groupRooms: [
+      { id: 'room-core-collab', name: '跨账户 Agent 与全平台机器人协同总群' },
+      { id: 'room-sec-drill', name: '红蓝安全演练与应急响应群' },
+    ],
+    existingOrder: ['s1'],
+  });
+  // s_room_backing must NOT appear as a separate workspace tab; both rooms appear 1-to-1
+  assert.deepEqual(initial, ['s1', '__room__:room-core-collab', '__room__:room-sec-drill']);
+
+  // Adding a brand new group room and deleting an old room updates tabs dynamically
+  const afterRoomChange = reconcileStrictSidebarTabs({
+    workspaces: [{ workspaceId: 'ws-1', path: '/ws', sessionIds: ['s1', 's_room_backing'] }],
+    allSessionIds: ['s1', 's_room_backing'],
+    archivedSessionIds: [],
+    byId: {
+      s1: { id: 's1', blank: false, cwd: '/ws' },
+      s_room_backing: { id: 's_room_backing', blank: false, cwd: '/ws' },
+    },
+    closedIds: new Set<string>(),
+    groupSessionIds: new Set(['s_room_backing']),
+    groupRooms: [
+      { id: 'room-core-collab', name: '跨账户 Agent 与全平台机器人协同总群' },
+      { id: 'room-new-ops', name: '新建协同群 3' },
+    ],
+    existingOrder: initial,
+  });
+  assert.deepEqual(afterRoomChange, ['s1', '__room__:room-core-collab', '__room__:room-new-ops']);
+
+  // Active tab resolution maps group room mode & bound backing sessions to __room__:<roomId>
+  assert.equal(
+    resolveEffectiveActiveTabId({
+      activeRoomMode: true,
+      activeRoomId: 'room-core-collab',
+      rawActiveSessionId: 's_room_backing',
+      getRoomForSession: (sid) => (sid === 's_room_backing' ? 'room-core-collab' : null),
+    }),
+    '__room__:room-core-collab',
+  );
+  assert.equal(
+    resolveEffectiveActiveTabId({
+      activeRoomMode: false,
+      activeRoomId: 'room-core-collab',
+      rawActiveSessionId: 's_room_backing',
+      getRoomForSession: (sid) => (sid === 's_room_backing' ? 'room-core-collab' : null),
+    }),
+    '__room__:room-core-collab',
+  );
+  assert.equal(
+    resolveEffectiveActiveTabId({
+      activeRoomMode: false,
+      activeRoomId: 'room-core-collab',
+      rawActiveSessionId: 's1',
+      getRoomForSession: () => null,
+    }),
+    's1',
+  );
+});
+
+

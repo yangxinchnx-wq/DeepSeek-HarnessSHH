@@ -16,11 +16,11 @@ const BROWSER_TAB_CSS_APPEND =
   '.wSkVaW_browserTabsBar{display:flex;align-items:center;gap:6px;min-width:0;flex:1;height:34px;overflow-x:hidden;scrollbar-width:none;padding:0;-webkit-app-region:no-drag;position:relative;scroll-behavior:auto}' +
   '.wSkVaW_browserTabsBar[data-overflow=true]{overflow-x:auto}' +
   '.wSkVaW_browserTabsBar::-webkit-scrollbar{display:none}' +
-  '.wSkVaW_browserTab{display:inline-flex;align-items:center;gap:8px;height:34px;width:168px;min-width:168px;max-width:168px;flex:0 0 168px;padding:0 8px 0 10px;border-radius:9999px;border:1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.16));background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);color:var(--dsw-alias-label-secondary);font-size:13px;line-height:18px;cursor:pointer;user-select:none;transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease;position:relative;box-sizing:border-box;touch-action:none}' +
+  '.wSkVaW_browserTab{display:inline-flex;align-items:center;gap:8px;height:34px;width:168px;min-width:168px;max-width:168px;flex:0 0 168px;padding:0 8px 0 10px;border-radius:9999px;border:1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.16));background:color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent);color:var(--dsw-alias-label-secondary);font-size:13px;line-height:18px;cursor:pointer;user-select:none;transition:background-color .22s cubic-bezier(.22,1,.36,1),border-color .22s cubic-bezier(.22,1,.36,1),color .18s ease,box-shadow .24s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.22,1,.36,1);position:relative;box-sizing:border-box;touch-action:none}' +
   '.wSkVaW_browserTab:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}' +
-  '.wSkVaW_browserTabActive{background:var(--dsw-specific-bubble-highlight, #FFFFFF);border-color:var(--dsw-alias-state-business-primary, #FF6A2B);border-width:1.5px;color:var(--dsw-alias-label-primary, #1F2329);font-weight:600;box-shadow:0 2px 6px var(--dsw-alias-state-business-tertiary, rgba(255,106,43,.12))}' +
+  '.wSkVaW_browserTabActive{background:var(--dsw-specific-bubble-highlight, #FFFFFF);border-color:var(--dsw-alias-state-business-primary, #FF6A2B);border-width:1px;color:var(--dsw-alias-label-primary, #1F2329);font-weight:600;box-shadow:inset 0 0 0 .5px var(--dsw-alias-state-business-primary, #FF6A2B),0 2px 6px var(--dsw-alias-state-business-tertiary, rgba(255,106,43,.12))}' +
   '.wSkVaW_browserTabDragging{z-index:10;cursor:grabbing!important;box-shadow:0 4px 12px rgba(0,0,0,.16)!important;transition:none!important;background:var(--dsw-alias-bg-base)!important}' +
-  '.wSkVaW_browserTabIcon{width:14px;height:14px;flex:none;color:var(--dsw-alias-label-tertiary);display:inline-flex;align-items:center;justify-content:center;pointer-events:none}' +
+  '.wSkVaW_browserTabIcon{width:14px;height:14px;flex:none;color:var(--dsw-alias-label-tertiary);display:inline-flex;align-items:center;justify-content:center;pointer-events:none;transition:color .2s ease}' +
   '.wSkVaW_browserTabActive .wSkVaW_browserTabIcon{color:var(--dsw-alias-state-business-primary, #FF6A2B)}' +
   '.wSkVaW_browserTabTitle{display:inline-flex;align-items:baseline;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-align:left}' +
   '.wSkVaW_browserTabRenameInput{flex:1;min-width:0;width:100%;height:22px;padding:0 5px;margin:0;border-radius:4px;border:1px solid var(--dsw-alias-state-business-primary, #4d6bfe);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px;font-family:inherit;outline:none;box-sizing:border-box}' +
@@ -45,6 +45,17 @@ const BROWSER_TAB_CSS_APPEND =
   // sidebar's 插件 nav row (cy=82 below the shared 52px brand band).
   '.wSkVaW_viewTabs{transform:translateY(-5.3px)!important}' +
   '.wSkVaW_header:has(.wSkVaW_viewTabs){height:110px!important;min-height:110px!important}' +
+  // Prevent ghost placeholder spacing in the left sidebar when all sessions in
+  // Default workspace are closed/archived while sidebar-groups is mounted.
+  '.bhn1Oq_listArea:has([data-dsh-harness-portal="sidebar-groups"]) .bhn1Oq_treeBody{flex:0 0 auto!important;min-height:0!important}' +
+  '.bhn1Oq_listArea:has([data-dsh-harness-portal="sidebar-groups"]) .bhn1Oq_list{flex:0 0 auto!important;padding-bottom:4px!important}' +
+  '.bhn1Oq_listArea:has([data-dsh-harness-portal="sidebar-groups"]) .bhn1Oq_list:not(:has(.YDXeBa_sessionRow)){padding-bottom:0!important}' +
+  '.bhn1Oq_list:not(:has(.YDXeBa_sessionRow)) + [class*="_exits_"],.bhn1Oq_groupSection:not(:has(.YDXeBa_sessionRow)) [class*="_exits_"],.bhn1Oq_groupSection:not(:has(.YDXeBa_sessionRow)) > :empty{display:none!important;height:0!important;margin:0!important;padding:0!important}' +
+  '.bhn1Oq_listArea:has([data-testid^="workspace-group-room-"]) .bhn1Oq_emptyState{display:none!important;height:0!important;margin:0!important;padding:0!important}' +
+  '.bhn1Oq_listArea:has([data-testid^="workspace-group-room-"]) .bhn1Oq_treeBody:has(.bhn1Oq_emptyState){display:none!important;height:0!important}' +
+  // Cohesive floating card styling for the group room bar inside Luminex Light/Dark stage cards
+  'body[data-dsh-theme-id="preset-1"] [data-testid="dsh-group-room-native-bar"]{background:rgba(43,49,70,0.92)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;border-color:rgba(255,255,255,0.11)!important;box-shadow:0 8px 24px -8px rgba(0,0,0,0.38)!important}' +
+  'body[data-dsh-theme-id="preset-1"][data-dsh-preset1-mode="light"] [data-testid="dsh-group-room-native-bar"]{background:rgba(248,248,248,0.94)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;border-color:rgba(0,0,0,0.085)!important;box-shadow:0 6px 20px -6px rgba(0,0,0,0.09)!important}' +
   SSH_CLIENT_CSS_APPEND;
 
 const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
@@ -113,8 +124,8 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 							const firstOptKey = (targetOptKey && store.optimisticTabs.has(targetOptKey))
 								? targetOptKey
 								: store.optimisticTabs.keys().next().value;
-							if (firstOptKey !== void 0) {
-								const optMeta = store.optimisticTabs.get(firstOptKey);
+							const optMeta = firstOptKey !== void 0 ? store.optimisticTabs.get(firstOptKey) : void 0;
+							if (firstOptKey !== void 0 && !optMeta?.knownIds?.has(realId)) {
 								store.optimisticTabs.delete(firstOptKey);
 								store.stableKeys.set(realId, firstOptKey);
 								const custom = store.customTitles.get(firstOptKey);
@@ -124,25 +135,34 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 								}
 								if (optMeta?.roomId) {
 									globalThis.__dshGroupHubStore?.bindSessionToRoom?.(realId, optMeta.roomId, optMeta.title, firstOptKey);
+									const roomTabId = "__room__:" + optMeta.roomId;
+									store.closedIds.delete(roomTabId);
+									const optIdx = store.order.indexOf(firstOptKey);
+									if (optIdx !== -1) store.order.splice(optIdx, 1);
+									if (!store.order.includes(roomTabId)) store.order.push(roomTabId);
 								} else {
 									globalThis.__dshGroupHubStore?.unbindSession?.(realId);
-								}
-								const optIdx = store.order.indexOf(firstOptKey);
-								if (optIdx !== -1) {
-									store.order[optIdx] = realId;
-									for (let i = store.order.length - 1; i >= 0; i--) {
-										if (i !== optIdx && store.order[i] === realId) {
-											store.order.splice(i, 1);
+									const optIdx = store.order.indexOf(firstOptKey);
+									if (optIdx !== -1) {
+										store.order[optIdx] = realId;
+										for (let i = store.order.length - 1; i >= 0; i--) {
+											if (i !== optIdx && store.order[i] === realId) {
+												store.order.splice(i, 1);
+											}
 										}
+									} else if (!store.order.includes(realId)) {
+										store.order.push(realId);
 									}
-								} else if (!store.order.includes(realId)) {
-									store.order.push(realId);
 								}
 								if (store.optimisticActiveId === firstOptKey) store.optimisticActiveId = void 0;
+								store.activeSessionId = realId;
 								store.emit();
 								return;
 							}
 						}
+						const boundRoom = globalThis.__dshGroupHubStore?.getRoomForSession?.(realId);
+						const orderKey = boundRoom ? ("__room__:" + boundRoom) : realId;
+						if (!store.order.includes(orderKey)) store.order.push(orderKey);
 					},
 					notifyPromptSent(sessionId) {
 						if (!sessionId) return;
@@ -164,6 +184,12 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 		function BrowserTaskTabsBar({ sessionId, useSessions, useWorkspaces, open, createNewTab, closeTab, renameTab, tWorkspace }) {
 			const store = getDshBrowserTabsStore();
 			const storeRev = (0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot, store.getSnapshot);
+			const gHub = typeof getDshGroupHubStore === "function" ? getDshGroupHubStore() : globalThis.__dshGroupHubStore;
+			const gHubRev = (0, react.useSyncExternalStore)(
+				(cb) => (gHub && typeof gHub.subscribe === "function" ? gHub.subscribe(cb) : () => {}),
+				() => (gHub && typeof gHub.getSnapshot === "function" ? gHub.getSnapshot() : 0),
+				() => 0
+			);
 			const sshStore = getDshSshStore();
 			const sshRev = (0, react.useSyncExternalStore)(sshStore.subscribe, sshStore.getSnapshot, sshStore.getSnapshot);
 			void sshRev;
@@ -180,11 +206,17 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 			const suppressClickRef = (0, react.useRef)(false);
 
 			(0, react.useEffect)(() => {
-				if (!store.noTabsHomeMode || !sessionId) return;
-				if (store.closedIds.has(sessionId)) return;
-				const summary = sessionsState?.byId?.[sessionId];
+				if (gHub && !gHub.loaded && typeof gHub.load === "function") {
+					gHub.load();
+				}
+			}, [gHub]);
+
+			(0, react.useEffect)(() => {
+				const curId = store.activeSessionId || sessionId || globalThis.__dshActiveSessionId;
+				if (!store.noTabsHomeMode || !curId || store.closedIds.has(curId)) return;
+				const summary = sessionsState?.byId?.[curId];
 				if (summary && (!summary.blank || summary.running || summary.promptAttempted)) {
-					store.notifyPromptSent(sessionId);
+					store.notifyPromptSent(curId);
 				}
 			}, [storeRev, sessionId, sessionsState]);
 
@@ -193,74 +225,80 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 					return [];
 				}
 				const archivedSet = new Set(workspacesState?.archivedSessionIds ?? []);
-				const wsSessionIds = (workspacesState?.items ?? []).flatMap((w) => [...w.sessionIds].reverse());
+				const wsItems = workspacesState?.items ?? [];
+				const explicitWsIds = new Set(wsItems.flatMap((w) => w.sessionIds ?? []));
+				const wsPaths = new Set(wsItems.map((w) => w.path).filter(Boolean));
 				const allSessionIds = sessionsState?.ids ?? [];
+				const byId = sessionsState?.byId ?? {};
+				const liveGroupHub = gHub || globalThis.__dshGroupHubStore;
+				const isSidebarVisible = (summary) => {
+					if (!summary || !summary.id || summary.origin === "subagent") return false;
+					if (archivedSet.has(summary.id) || store.closedIds.has(summary.id) || liveGroupHub?.getRoomForSession?.(summary.id)) return false;
+					return true;
+				};
 				const validSet = new Set();
 				const validCandidates = [];
-				for (const id of [...wsSessionIds, ...allSessionIds]) {
-					if (!id || validSet.has(id) || archivedSet.has(id) || store.closedIds.has(id)) continue;
-					const summary = sessionsState?.byId?.[id];
-					if (summary === void 0) {
-						// The server-side session listing can omit a session that the
-						// workspace still references (e.g. outside the current query
-						// window). A tab the user already opened must not vanish on
-						// recompute — keep it; unopened ids stay hidden as before.
-						if (store.order.includes(id) || store.stableKeys.has(id) || store.optimisticTabs.has(id)) {
-							validSet.add(id);
-							validCandidates.push(id);
-						}
-						continue;
-					}
-					if (summary.origin === "subagent") continue;
-					if (!store.order.includes(id) && !store.stableKeys.has(id) && store.optimisticTabs.size > 0) {
-						const firstOptKey = store.optimisticTabs.keys().next().value;
-						const optMeta = firstOptKey !== void 0 ? store.optimisticTabs.get(firstOptKey) : void 0;
-						if (firstOptKey !== void 0 && !optMeta?.knownIds?.has(id)) {
-							store.optimisticTabs.delete(firstOptKey);
-							store.stableKeys.set(id, firstOptKey);
-							const custom = store.customTitles.get(firstOptKey);
-							if (custom !== void 0) {
-								store.customTitles.delete(firstOptKey);
-								store.customTitles.set(id, custom);
+				for (const workspace of wsItems) {
+					const extraIds = allSessionIds.filter((id) => !explicitWsIds.has(id) && byId[id]?.cwd === workspace.path);
+					const wsCandidates = [...(workspace.sessionIds ?? [])].reverse().concat([...extraIds].reverse());
+					for (const id of wsCandidates) {
+						if (!id || validSet.has(id)) continue;
+						const summary = byId[id];
+						if (!isSidebarVisible(summary)) continue;
+						if (!store.order.includes(id) && !store.stableKeys.has(id) && store.optimisticTabs.size > 0) {
+							const firstOptKey = store.optimisticTabs.keys().next().value;
+							const optMeta = firstOptKey !== void 0 ? store.optimisticTabs.get(firstOptKey) : void 0;
+							if (firstOptKey !== void 0 && !optMeta?.knownIds?.has(id)) {
+								store.optimisticTabs.delete(firstOptKey);
+								store.stableKeys.set(id, firstOptKey);
+								const custom = store.customTitles.get(firstOptKey);
+								if (custom !== void 0) {
+									store.customTitles.delete(firstOptKey);
+									store.customTitles.set(id, custom);
+								}
+								if (optMeta?.roomId) {
+									liveGroupHub?.bindSessionToRoom?.(id, optMeta.roomId, optMeta.title, firstOptKey);
+									const optIdx = store.order.indexOf(firstOptKey);
+									if (optIdx !== -1) store.order.splice(optIdx, 1);
+								} else {
+									liveGroupHub?.unbindSession?.(id);
+									const optIdx = store.order.indexOf(firstOptKey);
+									if (optIdx !== -1) store.order[optIdx] = id;
+								}
+								if (store.optimisticActiveId === firstOptKey) store.optimisticActiveId = void 0;
 							}
-							if (optMeta?.roomId) {
-								globalThis.__dshGroupHubStore?.bindSessionToRoom?.(id, optMeta.roomId, optMeta.title, firstOptKey);
-							} else {
-								globalThis.__dshGroupHubStore?.unbindSession?.(id);
-							}
-							const optIdx = store.order.indexOf(firstOptKey);
-							if (optIdx !== -1) store.order[optIdx] = id;
-							if (store.optimisticActiveId === firstOptKey) store.optimisticActiveId = void 0;
 						}
+						if (!isSidebarVisible(summary)) continue;
+						validSet.add(id);
+						validCandidates.push(id);
 					}
-					// One conversation = one tab: the session the sidebar/main panel has
-					// active always keeps its own tab, blank 新会话 drafts included.
-					if (summary.blank && !summary.running && !summary.promptAttempted && !store.order.includes(id) && !store.stableKeys.has(id) && id !== store.activeSessionId) {
-						continue;
-					}
+				}
+				for (const id of allSessionIds) {
+					if (!id || validSet.has(id)) continue;
+					const summary = byId[id];
+					if (!summary || summary.blank || wsPaths.has(summary.cwd) || !isSidebarVisible(summary)) continue;
 					validSet.add(id);
 					validCandidates.push(id);
 				}
-				// Opened tabs survive list churn: a session the user opened keeps its
-				// tab even when neither the workspace nor the session list mentions
-				// it anymore (closed/archived ids are still excluded).
-				for (const orderId of store.order) {
-					if (!orderId || validSet.has(orderId) || archivedSet.has(orderId) || store.closedIds.has(orderId)) continue;
-					validSet.add(orderId);
-					validCandidates.push(orderId);
+				const groupRooms = Array.isArray(liveGroupHub?.rooms) ? liveGroupHub.rooms : [];
+				for (const rm of groupRooms) {
+					if (!rm || !rm.id) continue;
+					const roomTabId = "__room__:" + rm.id;
+					if (validSet.has(roomTabId) || store.closedIds.has(roomTabId)) continue;
+					validSet.add(roomTabId);
+					validCandidates.push(roomTabId);
 				}
-				for (const optId of store.optimisticTabs.keys()) {
-					if (!validSet.has(optId) && !store.closedIds.has(optId)) {
-						validSet.add(optId);
-						validCandidates.push(optId);
-					}
-				}
+				// Preserve user-established tab order strictly within the live left-sidebar set (workspace sessions + group rooms).
+				// Wait until workspace sessions hydrate before locking group rooms into store.order so initial order matches sidebar top-to-bottom deterministically.
+				const wsHydrated = sessionsState?.phase === "ready" || allSessionIds.length > 0 || wsItems.length > 0;
 				const nextOrder = [];
 				const included = new Set();
-				for (const id of store.order) {
-					if (validSet.has(id) && !included.has(id)) {
-						nextOrder.push(id);
-						included.add(id);
+				if (wsHydrated) {
+					for (const id of store.order) {
+						if (validSet.has(id) && !included.has(id)) {
+							nextOrder.push(id);
+							included.add(id);
+						}
 					}
 				}
 				for (const id of validCandidates) {
@@ -269,10 +307,12 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 						included.add(id);
 					}
 				}
-				store.order.length = 0;
-				store.order.push(...nextOrder);
+				if (wsHydrated) {
+					store.order.length = 0;
+					store.order.push(...nextOrder);
+				}
 				return [...nextOrder];
-			}, [sessionsState, workspacesState, storeRev]);
+			}, [sessionsState, workspacesState, storeRev, gHubRev]);
 
 			const checkOverflow = (0, react.useCallback)(() => {
 				const el = barRef.current;
@@ -288,9 +328,19 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				checkOverflow();
 				const el = barRef.current;
 				if (!el || typeof ResizeObserver === "undefined") return;
-				const ro = new ResizeObserver(() => checkOverflow());
+				let rafId = 0;
+				const ro = new ResizeObserver(() => {
+					if (rafId) return;
+					rafId = requestAnimationFrame(() => {
+						rafId = 0;
+						checkOverflow();
+					});
+				});
 				ro.observe(el);
-				return () => ro.disconnect();
+				return () => {
+					if (rafId) cancelAnimationFrame(rafId);
+					ro.disconnect();
+				};
 			}, [checkOverflow, tabIds.length, storeRev]);
 
 			(0, react.useEffect)(() => {
@@ -316,6 +366,11 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				setEditingTabId((curr) => curr === tabId ? null : curr);
 				const trimmed = (rawVal ?? "").trim();
 				if (!trimmed) return;
+				if (typeof tabId === "string" && tabId.startsWith("__room__:")) {
+					const roomId = tabId.slice("__room__:".length);
+					gHub?.renameRoom?.(roomId, trimmed);
+					return;
+				}
 				store.setCustomTitle(tabId, trimmed);
 				if (!store.optimisticTabs.has(tabId)) {
 					renameTab?.(tabId, trimmed);
@@ -331,6 +386,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				const tabEl = e.currentTarget;
 				if (!barEl || !(tabEl instanceof HTMLElement)) return;
 
+				suppressClickRef.current = false;
 				const initialRect = tabEl.getBoundingClientRect();
 				let naturalLeft = initialRect.left;
 				const tabWidth = initialRect.width;
@@ -340,7 +396,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 
 				const onPointerMove = (moveEvent) => {
 					const rawDx = moveEvent.clientX - startX;
-					if (!moved && Math.abs(rawDx) < 4) return;
+					if (!moved && Math.abs(rawDx) < 12) return;
 					if (!moved) {
 						moved = true;
 						suppressClickRef.current = true;
@@ -366,11 +422,11 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 							if (!nodeId || nodeId === tabId) continue;
 							const rect = node.getBoundingClientRect();
 							const mid = rect.left + rect.width / 2;
-							if (i < curIdx && draggedCenter <= mid + 14) {
+							if (i < curIdx && draggedCenter < mid) {
 								targetIdx = i;
 								break;
 							}
-							if (i > curIdx && draggedCenter >= mid - 14) {
+							if (i > curIdx && draggedCenter > mid) {
 								targetIdx = i;
 							}
 						}
@@ -400,6 +456,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 					window.removeEventListener("pointermove", onPointerMove);
 					window.removeEventListener("pointerup", finishPointer);
 					window.removeEventListener("pointercancel", finishPointer);
+					window.removeEventListener("blur", finishPointer);
 					if (moved) {
 						setDragState(null);
 						setTimeout(() => {
@@ -411,9 +468,29 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				window.addEventListener("pointermove", onPointerMove);
 				window.addEventListener("pointerup", finishPointer);
 				window.addEventListener("pointercancel", finishPointer);
+				window.addEventListener("blur", finishPointer);
 			};
 
-			const effectiveActiveId = store.optimisticActiveId ?? sessionId ?? store.activeSessionId;
+			const rawActiveId = store.optimisticActiveId || store.activeSessionId || sessionId || globalThis.__dshActiveSessionId;
+			const activeBoundRoomId = gHub?.activeRoomMode && gHub?.activeRoomId
+				? gHub.activeRoomId
+				: (rawActiveId ? gHub?.getRoomForSession?.(rawActiveId) : null);
+			const effectiveActiveId = activeBoundRoomId ? ("__room__:" + activeBoundRoomId) : rawActiveId;
+
+			(0, react.useEffect)(() => {
+				const bar = barRef.current;
+				if (!bar || !effectiveActiveId) return;
+				const nodes = bar.querySelectorAll('[role="tab"]');
+				for (let i = 0; i < nodes.length; i++) {
+					const node = nodes[i];
+					if (node.getAttribute("data-tab-session-id") === effectiveActiveId) {
+						if (typeof node.scrollIntoView === "function") {
+							node.scrollIntoView({ behavior: "auto", inline: "nearest", block: "nearest" });
+						}
+						break;
+					}
+				}
+			}, [effectiveActiveId, tabIds.length]);
 
 			return (0, react_jsx_runtime.jsxs)("div", {
 				ref: barRef,
@@ -424,29 +501,54 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 				"data-overflow": isOverflowing ? "true" : "false",
 				children: [
 					tabIds.map((tabId) => {
-						const summary = sessionsState?.byId?.[tabId];
-						const optTab = store.optimisticTabs.get(tabId);
+						const isGroupRoomTab = typeof tabId === "string" && tabId.startsWith("__room__:");
+						const groupRoomId = isGroupRoomTab ? tabId.slice("__room__:".length) : null;
+						const groupRoom = groupRoomId ? (gHub?.rooms ?? []).find((r) => r.id === groupRoomId) : null;
+						const summary = isGroupRoomTab ? void 0 : sessionsState?.byId?.[tabId];
+						const optTab = isGroupRoomTab ? void 0 : store.optimisticTabs.get(tabId);
 						const isActive = tabId === effectiveActiveId;
-						const ws = (workspacesState?.items ?? []).find((w) => w.sessionIds.includes(tabId) || (summary?.cwd && w.path === summary.cwd) || (optTab?.workspaceId && w.workspaceId === optTab.workspaceId));
+						const ws = isGroupRoomTab ? void 0 : (workspacesState?.items ?? []).find((w) => w.sessionIds.includes(tabId) || (summary?.cwd && w.path === summary.cwd) || (optTab?.workspaceId && w.workspaceId === optTab.workspaceId));
 						const wsLabel = ws ? workspaceDisplayTitle(ws.title, defaultWorkspaceName) : "";
-						const customTitle = store.getCustomTitle(tabId);
-						const memoryTitle = store.titleMemory.get(tabId);
-						const rawTitle = customTitle || (summary?.blank ? newSessionLabel : (summary?.title?.trim() || summary?.displayTitle || optTab?.title || memoryTitle || newSessionLabel));
+						const customTitle = isGroupRoomTab ? void 0 : store.getCustomTitle(tabId);
+						const memoryTitle = isGroupRoomTab ? void 0 : store.titleMemory.get(tabId);
+						const rawTitle = isGroupRoomTab
+							? (groupRoom?.name || store.getCustomTitle(tabId) || "群组协同会话")
+							: (customTitle || (summary?.blank ? newSessionLabel : (summary?.title?.trim() || summary?.displayTitle || optTab?.title || memoryTitle || newSessionLabel)));
 						// Remember the last real title so a tab whose summary is missing
 						// still shows its name instead of falling back to 新会话.
-						if (!summary?.blank && rawTitle && rawTitle !== newSessionLabel) store.titleMemory.set(tabId, rawTitle);
-						const showWsBadge = (workspacesState?.items?.length ?? 0) > 1 && wsLabel !== "";
-						const tooltipText = wsLabel ? \`\${wsLabel} · \${rawTitle}\` : rawTitle;
+						if (!isGroupRoomTab && !summary?.blank && rawTitle && rawTitle !== newSessionLabel) store.titleMemory.set(tabId, rawTitle);
+						const showWsBadge = !isGroupRoomTab && (workspacesState?.items?.length ?? 0) > 1 && wsLabel !== "";
+						const tooltipText = isGroupRoomTab ? \`群组 · \${rawTitle}\` : (wsLabel ? \`\${wsLabel} · \${rawTitle}\` : rawTitle);
 						const isEditing = editingTabId === tabId;
 						const isDragging = dragState?.tabId === tabId;
 						const reactKey = store.stableKeys.get(tabId) ?? tabId;
-						const tabSshState = sshStore.getSession(tabId);
+						const tabSshState = isGroupRoomTab ? void 0 : sshStore.getSession(tabId);
 						const tabSshBadge = tabSshState?.tabBadgeState ?? "none";
+						const activateTab = () => {
+							if (isGroupRoomTab) {
+								store.optimisticActiveId = void 0;
+								open?.(tabId);
+								return;
+							}
+							if (store.optimisticTabs.has(tabId)) {
+								store.optimisticActiveId = tabId;
+								store.emit(true);
+								globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
+								globalThis.__dshSelectMainPanel?.(null);
+							} else {
+								store.optimisticActiveId = void 0;
+								globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
+								globalThis.__dshSelectMainPanel?.(null);
+								open?.(tabId);
+							}
+						};
 						return (0, react_jsx_runtime.jsxs)("div", {
 							role: "tab",
 							tabIndex: 0,
 							"aria-selected": isActive,
 							"data-tab-session-id": tabId,
+							"data-tab-kind": isGroupRoomTab ? "group-room" : "session",
+							"data-tab-room-id": groupRoomId || void 0,
 							title: tooltipText,
 							style: isDragging ? { transform: \`translate3d(\${dragState.dx}px, 0px, 0px)\` } : void 0,
 							className: clsx(
@@ -457,17 +559,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 							onPointerDown: (e) => startTabPointerDown(e, tabId),
 							onClick: () => {
 								if (suppressClickRef.current || isEditing) return;
-								if (store.optimisticTabs.has(tabId)) {
-									store.optimisticActiveId = tabId;
-									store.emit(true);
-									globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
-									globalThis.__dshSelectMainPanel?.(null);
-								} else {
-									store.optimisticActiveId = void 0;
-									globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
-									globalThis.__dshSelectMainPanel?.(null);
-									open?.(tabId);
-								}
+								activateTab();
 							},
 							onDoubleClick: (e) => {
 								const targetEl = e.target;
@@ -481,17 +573,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 								if (e.target !== e.currentTarget || isEditing) return;
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();
-									if (store.optimisticTabs.has(tabId)) {
-										store.optimisticActiveId = tabId;
-										store.emit(true);
-										globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
-										globalThis.__dshSelectMainPanel?.(null);
-									} else {
-										store.optimisticActiveId = void 0;
-										globalThis.__dshGroupHubStore?.syncActiveTabSession?.(tabId);
-										globalThis.__dshSelectMainPanel?.(null);
-										open?.(tabId);
-									}
+									activateTab();
 								}
 							},
 							children: [
@@ -549,7 +631,7 @@ const BROWSER_TASK_TABS_COMPONENT = `		function getDshBrowserTabsStore() {
 									onPointerDown: (e) => e.stopPropagation(),
 									onClick: (e) => {
 										e.stopPropagation();
-										closeTab?.(tabId, tabIds, sessionId);
+										closeTab?.(tabId, tabIds, effectiveActiveId);
 									},
 									children: (0, react_jsx_runtime.jsx)("svg", {
 										width: 12,
@@ -1126,6 +1208,7 @@ function patchConversationClient(rootDir: string): void {
 			void tabRev;
 			const [editingName, setEditingName] = (0, react.useState)(false);
 			const [nameDraft, setNameDraft] = (0, react.useState)("");
+			const [barCollapsed, setBarCollapsed] = (0, react.useState)(true);
 			const [showTeaming, setShowTeaming] = (0, react.useState)(false);
 			const [showSyncFeed, setShowSyncFeed] = (0, react.useState)(false);
 			const [teamJoin, setTeamJoin] = (0, react.useState)({
@@ -1136,11 +1219,23 @@ function patchConversationClient(rootDir: string): void {
 			const [teamNotice, setTeamNotice] = (0, react.useState)("");
 			const fileInputRef = (0, react.useRef)(null);
 
-			if (!gStore) return null;
+			const toggleBarCollapsed = () => {
+				setBarCollapsed((prev) => !prev);
+			};
+
 			const effectiveSid = tabStore.optimisticActiveId || sessionId;
-			const boundRoomId = effectiveSid && gStore.getRoomForSession
-				? gStore.getRoomForSession(effectiveSid)
-				: (gStore.activeRoomMode ? gStore.activeRoomId : null);
+			const boundRoomId = gStore
+				? ((effectiveSid && gStore.getRoomForSession ? gStore.getRoomForSession(effectiveSid) : null)
+					|| (gStore.activeRoomMode ? gStore.activeRoomId : null))
+				: null;
+
+			(0, react.useEffect)(() => {
+				if (gStore && boundRoomId && typeof gStore.syncServerActiveRoom === "function") {
+					gStore.syncServerActiveRoom(boundRoomId);
+				}
+			}, [gStore, boundRoomId]);
+
+			if (!gStore) return null;
 			if (!boundRoomId) return null;
 			const rooms = gStore.rooms || [];
 			const agents = gStore.agents || [];
@@ -1162,43 +1257,37 @@ function patchConversationClient(rootDir: string): void {
 				await gStore.uploadRoomAvatarFile?.(activeRoom.id, file);
 			};
 
-			const toggleRoomAgentInBar = async (ag) => {
-				const curIds = activeRoom.agentIds || [];
+			const getLatestRoom = () => (gStore.rooms || []).find((r) => r.id === activeRoom.id) || activeRoom;
+
+			const toggleRoomAgentInBar = (ag) => {
+				const latest = getLatestRoom();
+				const curIds = latest.agentIds || [];
 				const exists = curIds.includes(ag.id);
 				const nextIds = exists ? curIds.filter((id) => id !== ag.id) : [...curIds, ag.id];
-				const resp = await fetch(\`/api/superagent-groups/rooms/\${encodeURIComponent(activeRoom.id)}\`, {
-					method: "PUT",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify({ agentIds: nextIds })
-				});
-				const data = await resp.json();
-				if (data.ok) gStore.updateFromApi({ ok: true, rooms: data.rooms || [] });
+				if (typeof gStore.patchRoomOptimistic === "function") {
+					gStore.patchRoomOptimistic(latest.id, { agentIds: nextIds });
+				}
 				if (!exists) {
 					globalThis.__dshAppendComposerDraft?.(\`@\${ag.handle} \`);
 				}
 			};
 
-			const toggleRoomConnectorInBar = async (conn) => {
-				const curIds = activeRoom.connectorIds || [];
+			const toggleRoomConnectorInBar = (conn) => {
+				const latest = getLatestRoom();
+				const curIds = latest.connectorIds || [];
 				const exists = curIds.includes(conn.id);
 				const nextIds = exists ? curIds.filter((id) => id !== conn.id) : [...curIds, conn.id];
-				const resp = await fetch(\`/api/superagent-groups/rooms/\${encodeURIComponent(activeRoom.id)}\`, {
-					method: "PUT",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify({ connectorIds: nextIds })
-				});
-				const data = await resp.json();
-				if (data.ok) gStore.updateFromApi({ ok: true, rooms: data.rooms || [] });
+				if (typeof gStore.patchRoomOptimistic === "function") {
+					gStore.patchRoomOptimistic(latest.id, { connectorIds: nextIds });
+				}
 			};
 
-			const updateMode = async (collaborationMode) => {
-				const resp = await fetch(\`/api/superagent-groups/rooms/\${encodeURIComponent(activeRoom.id)}\`, {
-					method: "PUT",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify({ collaborationMode })
-				});
-				const data = await resp.json();
-				if (data.ok) gStore.updateFromApi({ ok: true, rooms: data.rooms || [] });
+			const updateMode = (collaborationMode) => {
+				const latest = getLatestRoom();
+				if (latest.collaborationMode === collaborationMode) return;
+				if (typeof gStore.patchRoomOptimistic === "function") {
+					gStore.patchRoomOptimistic(latest.id, { collaborationMode });
+				}
 			};
 
 			const handleJoinPeerDsh = async () => {
@@ -1254,19 +1343,25 @@ function patchConversationClient(rootDir: string): void {
 					tipDesc: "群内所有已启用的跨账户 Agent 同时收到消息并从各自专业领域（架构、安全、运维等）并行输出会诊意见。"
 				}
 			];
+			const activeModeLabel = (modeOptions.find((m) => m.id === activeRoom.collaborationMode) || modeOptions[0]).label;
 
 			return (0, react_jsx_runtime.jsxs)("div", {
 				"data-testid": "dsh-group-room-native-bar",
+				"data-collapsed": barCollapsed ? "true" : "false",
 				style: {
 					flex: "none",
 					width: "100%",
+					maxWidth: "100%",
+					pointerEvents: "auto",
 					boxSizing: "border-box",
-					padding: "10px 20px",
-					borderBottom: "1px solid var(--dsw-alias-border-def, rgba(128,128,128,0.16))",
-					background: "var(--dsw-alias-bg-layer-1, transparent)",
+					padding: "10px 16px",
+					borderRadius: 14,
+					border: "1px solid var(--dsw-alias-border-l3, rgba(128,128,128,0.18))",
+					background: "var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #ffffff))",
+					boxShadow: "0 6px 20px -6px rgba(0,0,0,0.09)",
 					display: "flex",
 					flexDirection: "column",
-					gap: 8,
+					gap: barCollapsed ? 0 : 8,
 					zIndex: 8
 				},
 				children: [
@@ -1284,13 +1379,13 @@ function patchConversationClient(rootDir: string): void {
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "space-between",
-							gap: 12,
+							gap: 10,
 							minHeight: 32,
 							flexWrap: "wrap"
 						},
 						children: [
 							(0, react_jsx_runtime.jsxs)("div", {
-								style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0 },
+								style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 220px" },
 								children: [
 									(0, react_jsx_runtime.jsx)("div", {
 										"data-testid": "group-room-avatar",
@@ -1306,8 +1401,8 @@ function patchConversationClient(rootDir: string): void {
 											width: 32,
 											height: 32,
 											borderRadius: 8,
-											border: "1.5px solid #FF6A2B",
-											background: "#FFFFFF",
+											border: "none",
+											background: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12))",
 											display: "inline-flex",
 											alignItems: "center",
 											justifyContent: "center",
@@ -1316,7 +1411,7 @@ function patchConversationClient(rootDir: string): void {
 											flexShrink: 0,
 											userSelect: "none",
 											boxSizing: "border-box",
-											boxShadow: "0 2px 6px rgba(255,106,43,0.12)"
+											boxShadow: "none"
 										},
 										children: activeRoom.avatarUrl ? (0, react_jsx_runtime.jsx)("img", {
 											src: activeRoom.avatarUrl,
@@ -1334,7 +1429,7 @@ function patchConversationClient(rootDir: string): void {
 												fontSize: 13,
 												fontWeight: 650,
 												lineHeight: 1,
-												color: "#1F2329"
+												color: "var(--dsw-alias-label-primary, #1F2329)"
 											},
 											children: (activeRoom.name || "群").trim().slice(0, 1)
 										})
@@ -1382,27 +1477,86 @@ function patchConversationClient(rootDir: string): void {
 										},
 										children: activeRoom.name
 									}),
-									(0, react_jsx_runtime.jsx)("span", {
-										style: { fontSize: 11.5, lineHeight: "22px", color: "var(--dsw-alias-label-tertiary)" },
+									!barCollapsed && (0, react_jsx_runtime.jsx)("span", {
+										style: { fontSize: 11.5, lineHeight: "22px", color: "var(--dsw-alias-label-tertiary)", whiteSpace: "nowrap" },
 										children: "双击头像换图 · 双击群名改名"
+									})
+								]
+							}),
+							(0, react_jsx_runtime.jsxs)("div", {
+								style: { display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" },
+								children: [
+									barCollapsed && (0, react_jsx_runtime.jsx)("span", {
+										"data-testid": "group-room-collapsed-summary",
+										style: {
+											fontSize: 12,
+											lineHeight: "20px",
+											color: "var(--dsw-alias-label-tertiary)",
+											whiteSpace: "nowrap"
+										},
+										children: \`\${(activeRoom.agentIds || []).length}A·\${(activeRoom.connectorIds || []).length}B · \${activeModeLabel}\`
+									}),
+									(0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: "dsh-ghub-btn dsh-group-bar-ctrl",
+										"data-testid": "group-room-bar-collapse-toggle",
+										"aria-expanded": !barCollapsed,
+										"data-active": "false",
+										"data-dsh-tip-title": barCollapsed ? "展开群组工具栏" : "折叠群组工具栏",
+										"data-dsh-tip": barCollapsed ? "展开成员芯片、协同模式与组队/群设置按钮" : "折叠群组工具栏，为对话内容留出更大垂直视野",
+										"data-dsh-tip-tag": "",
+										title: barCollapsed ? "展开群组工具栏" : "收起群组工具栏",
+										onClick: toggleBarCollapsed,
+										style: { gap: 4 },
+										children: [
+											(0, react_jsx_runtime.jsx)("svg", {
+												width: 12,
+												height: 12,
+												viewBox: "0 0 12 12",
+												fill: "none",
+												"aria-hidden": "true",
+												style: {
+													transform: barCollapsed ? "rotate(180deg)" : "rotate(0deg)",
+													transition: "transform .16s ease",
+													flexShrink: 0
+												},
+												children: (0, react_jsx_runtime.jsx)("path", {
+													d: "M2.5 7.5L6 4L9.5 7.5",
+													stroke: "currentColor",
+													strokeWidth: 1.5,
+													strokeLinecap: "round",
+													strokeLinejoin: "round"
+												})
+											}),
+											(0, react_jsx_runtime.jsx)("span", {
+												children: barCollapsed ? "展开" : "收起"
+											})
+										]
 									})
 								]
 							})
 						]
 					}),
-					(0, react_jsx_runtime.jsxs)("div", {
+					!barCollapsed && (0, react_jsx_runtime.jsxs)("div", {
 						"data-testid": "group-room-settings-row",
 						style: {
 							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							gap: 8,
-							minHeight: 28,
-							flexWrap: "wrap"
+							flexDirection: "column",
+							gap: 6,
+							width: "100%",
+							minWidth: 0
 						},
 						children: [
 							(0, react_jsx_runtime.jsxs)("div", {
-								style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+								"data-testid": "group-room-members-row",
+								style: {
+									display: "flex",
+									alignItems: "center",
+									flexWrap: "wrap",
+									gap: 6,
+									width: "100%",
+									minWidth: 0
+								},
 								children: [
 									agents.map((ag) => {
 										const inRoom = (activeRoom.agentIds || []).includes(ag.id);
@@ -1444,75 +1598,84 @@ function patchConversationClient(rootDir: string): void {
 											onClick: () => toggleRoomConnectorInBar(conn),
 											children: cleanBotName
 										}, conn.id);
-									}),
-									(0, react_jsx_runtime.jsx)("span", {
-										style: {
-											width: 1,
-											height: 16,
-											background: "var(--dsw-alias-border-l2, rgba(128,128,128,0.22))",
-											margin: "0 2px",
-											flexShrink: 0
-										}
-									}),
-									modeOptions.map((m) => {
-										const isModeActive = activeRoom.collaborationMode === m.id;
-										return (0, react_jsx_runtime.jsx)("button", {
-											type: "button",
-											className: "dsh-ghub-btn dsh-group-bar-ctrl",
-											"data-testid": \`group-mode-btn-\${m.id}\`,
-											"data-active": isModeActive ? "true" : "false",
-											"aria-pressed": isModeActive,
-											"data-dsh-tip-title": m.tipTitle,
-											"data-dsh-tip": m.tipDesc,
-											"data-dsh-tip-tag": "",
-											onClick: () => updateMode(m.id),
-											children: m.label
-										}, m.id);
 									})
 								]
 							}),
 							(0, react_jsx_runtime.jsxs)("div", {
-								style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+								"data-testid": "group-room-actions-row",
+								style: {
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									flexWrap: "wrap",
+									rowGap: 6,
+									columnGap: 8,
+									width: "100%",
+									minWidth: 0
+								},
 								children: [
-									(0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "dsh-ghub-btn dsh-group-bar-ctrl",
-										"data-testid": "toggle-dsh-teaming-btn",
-										"data-active": showTeaming ? "true" : "false",
-										"aria-pressed": showTeaming,
-										"data-dsh-tip-title": \`多 DSH 跨实例组队联机（邀请码：\${activeRoom.inviteCode}）\`,
-										"data-dsh-tip": "点击展开或收起跨 DSH 实例联邦组队面板：可将本群邀请码发给队友，或填入队友 DSH 实例地址与邀请码组建多人多 Agent 联机群聊。",
-										"data-dsh-tip-tag": "",
-										onClick: () => setShowTeaming((v) => !v),
-										children: \`多 DSH 组队 (\${activeRoom.inviteCode})\`
+									(0, react_jsx_runtime.jsx)("div", {
+										style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+										children: modeOptions.map((m) => {
+											const isModeActive = activeRoom.collaborationMode === m.id;
+											return (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "dsh-ghub-btn dsh-group-bar-ctrl",
+												"data-testid": \`group-mode-btn-\${m.id}\`,
+												"data-active": isModeActive ? "true" : "false",
+												"aria-pressed": isModeActive,
+												"data-dsh-tip-title": m.tipTitle,
+												"data-dsh-tip": m.tipDesc,
+												"data-dsh-tip-tag": "",
+												onClick: () => updateMode(m.id),
+												children: m.label
+											}, m.id);
+										})
 									}),
-									(0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "dsh-ghub-btn dsh-group-bar-ctrl",
-										"data-active": showSyncFeed ? "true" : "false",
-										"aria-pressed": showSyncFeed,
-										"data-dsh-tip-title": \`群组实时同步消息流（共 \${(activeRoom.messages || []).length} 条）\`,
-										"data-dsh-tip": "点击展开或收起本群跨账户 Agent 与飞书、钉钉、企业微信、Telegram 等外部群机器人的实时同步消息预览。",
-										"data-dsh-tip-tag": "",
-										onClick: () => setShowSyncFeed((v) => !v),
-										children: showSyncFeed ? "收起同步消息" : \`同步消息 (\${(activeRoom.messages || []).length})\`
-									}),
-									(0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "dsh-ghub-btn dsh-group-bar-ctrl",
-										"data-testid": "open-group-settings-btn",
-										"data-active": "false",
-										"data-dsh-tip-title": \`群设置 (\${(activeRoom.agentIds || []).length}A·\${(activeRoom.connectorIds || []).length}B)\`,
-										"data-dsh-tip": \`该群组目前成员有 \${(activeRoom.agentIds || []).length} Agent \${(activeRoom.connectorIds || []).length} Bot。点击进入群组配置中心，管理跨账户 Agent 节点、外部机器人桥接及协同规则。\`,
-										"data-dsh-tip-tag": "",
-										onClick: () => globalThis.__dshSelectMainPanel?.("dsh-group-hub"),
-										children: \`群设置 (\${(activeRoom.agentIds || []).length}A·\${(activeRoom.connectorIds || []).length}B)\`
+									(0, react_jsx_runtime.jsxs)("div", {
+										style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+										children: [
+											(0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "dsh-ghub-btn dsh-group-bar-ctrl",
+												"data-testid": "toggle-dsh-teaming-btn",
+												"data-active": showTeaming ? "true" : "false",
+												"aria-pressed": showTeaming,
+												"data-dsh-tip-title": \`多 DSH 跨实例组队联机（邀请码：\${activeRoom.inviteCode}）\`,
+												"data-dsh-tip": "点击展开或收起跨 DSH 实例联邦组队面板：可将本群邀请码发给队友，或填入队友 DSH 实例地址与邀请码组建多人多 Agent 联机群聊。",
+												"data-dsh-tip-tag": "",
+												onClick: () => setShowTeaming((v) => !v),
+												children: \`多 DSH 组队 (\${activeRoom.inviteCode})\`
+											}),
+											(0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "dsh-ghub-btn dsh-group-bar-ctrl",
+												"data-active": showSyncFeed ? "true" : "false",
+												"aria-pressed": showSyncFeed,
+												"data-dsh-tip-title": \`群组实时同步消息流（共 \${(activeRoom.messages || []).length} 条）\`,
+												"data-dsh-tip": "点击展开或收起本群跨账户 Agent 与飞书、钉钉、企业微信、Telegram 等外部群机器人的实时同步消息预览。",
+												"data-dsh-tip-tag": "",
+												onClick: () => setShowSyncFeed((v) => !v),
+												children: showSyncFeed ? "收起同步消息" : \`同步消息 (\${(activeRoom.messages || []).length})\`
+											}),
+											(0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "dsh-ghub-btn dsh-group-bar-ctrl",
+												"data-testid": "open-group-settings-btn",
+												"data-active": "false",
+												"data-dsh-tip-title": \`群设置 (\${(activeRoom.agentIds || []).length}A·\${(activeRoom.connectorIds || []).length}B)\`,
+												"data-dsh-tip": \`该群组目前成员有 \${(activeRoom.agentIds || []).length} Agent \${(activeRoom.connectorIds || []).length} Bot。点击进入群组配置中心，管理跨账户 Agent 节点、外部机器人桥接及协同规则。\`,
+												"data-dsh-tip-tag": "",
+												onClick: () => globalThis.__dshSelectMainPanel?.("dsh-group-hub"),
+												children: \`群设置 (\${(activeRoom.agentIds || []).length}A·\${(activeRoom.connectorIds || []).length}B)\`
+											})
+										]
 									})
 								]
 							})
 						]
 					}),
-					showTeaming && (0, react_jsx_runtime.jsxs)("div", {
+					!barCollapsed && showTeaming && (0, react_jsx_runtime.jsxs)("div", {
 						className: "dsh-ghub-card",
 						"data-testid": "dsh-teaming-panel",
 						style: { padding: "10px 12px", marginTop: 2 },
@@ -1539,7 +1702,7 @@ function patchConversationClient(rootDir: string): void {
 								]
 							}),
 							(0, react_jsx_runtime.jsxs)("div", {
-								style: { display: "grid", gridTemplateColumns: "1.3fr 0.8fr 1fr auto", gap: 8, alignItems: "center", marginTop: 4 },
+								style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, alignItems: "center", marginTop: 4 },
 								children: [
 									(0, react_jsx_runtime.jsx)("input", {
 										className: "dsh-ghub-input",
@@ -1586,7 +1749,7 @@ function patchConversationClient(rootDir: string): void {
 							})
 						]
 					}),
-					showSyncFeed && (0, react_jsx_runtime.jsx)("div", {
+					!barCollapsed && showSyncFeed && (0, react_jsx_runtime.jsx)("div", {
 						style: {
 							display: "flex",
 							flexDirection: "column",
@@ -2033,23 +2196,134 @@ function patchWorkspaceClient(rootDir: string): void {
 					busyConnectorIds: new Set(),
 					activeRoomId: "room-core-collab",
 					activeRoomMode: false,
-					roomSessionMap: {},
-					sessionRoomMap: {},
+					roomSessionMap: (() => {
+						const initial = {};
+						try {
+							const raw = window.localStorage.getItem("dsh_group_room_session_map_v1");
+							if (raw) {
+								const parsed = JSON.parse(raw);
+								if (parsed && typeof parsed === "object") {
+									for (const [rid, sid] of Object.entries(parsed)) {
+										if (typeof rid === "string" && typeof sid === "string" && rid && sid && !sid.startsWith("__opt_tab_")) {
+											initial[rid] = sid;
+										}
+									}
+								}
+							}
+						} catch (_e) {}
+						return initial;
+					})(),
+					sessionRoomMap: (() => {
+						const initial = {};
+						try {
+							const raw = window.localStorage.getItem("dsh_group_room_session_map_v1");
+							if (raw) {
+								const parsed = JSON.parse(raw);
+								if (parsed && typeof parsed === "object") {
+									for (const [rid, sid] of Object.entries(parsed)) {
+										if (typeof rid === "string" && typeof sid === "string" && rid && sid && !sid.startsWith("__opt_tab_")) {
+											initial[sid] = rid;
+										}
+									}
+								}
+							}
+						} catch (_e) {}
+						return initial;
+					})(),
 					groupExpanded: true,
 					showAddRoom: false,
 					loaded: false,
 					loading: false,
 					listeners: new Set(),
+					_roomPatchSeq: {},
+					_roomPendingPatch: {},
+					_roomSyncInFlight: {},
+					_serverActiveRoomId: void 0,
+					syncServerActiveRoom(roomId) {
+						const normalized = roomId || null;
+						if (st._serverActiveRoomId === normalized) return;
+						st._serverActiveRoomId = normalized;
+						fetch("/api/superagent-groups/active-room", {
+							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify({ roomId: normalized })
+						}).catch(() => {
+							if (st._serverActiveRoomId === normalized) st._serverActiveRoomId = void 0;
+						});
+					},
+					patchRoomOptimistic(roomId, patch) {
+						if (!roomId || !patch || typeof patch !== "object") return;
+						const nextSeq = (st._roomPatchSeq[roomId] || 0) + 1;
+						st._roomPatchSeq[roomId] = nextSeq;
+						st._roomPendingPatch[roomId] = Object.assign({}, st._roomPendingPatch[roomId] || {}, patch);
+						let found = false;
+						st.rooms = (st.rooms || []).map((r) => {
+							if (r.id !== roomId) return r;
+							found = true;
+							return Object.assign({}, r, patch, { updatedAt: new Date().toISOString() });
+						});
+						if (found) st.emit(true);
+						if (st._roomSyncInFlight[roomId]) return;
+						st._roomSyncInFlight[roomId] = true;
+						const drain = async () => {
+							try {
+								while (st._roomPendingPatch[roomId]) {
+									const payload = st._roomPendingPatch[roomId];
+									delete st._roomPendingPatch[roomId];
+									const sentSeq = st._roomPatchSeq[roomId];
+									const resp = await fetch(\`/api/superagent-groups/rooms/\${encodeURIComponent(roomId)}\`, {
+										method: "PUT",
+										headers: { "content-type": "application/json" },
+										body: JSON.stringify(payload)
+									});
+									if (!resp.ok) throw new Error("HTTP " + resp.status);
+									const data = await resp.json();
+									if (!data || !data.ok) throw new Error(data?.error || "Room update failed");
+									if (sentSeq === st._roomPatchSeq[roomId] && !st._roomPendingPatch[roomId] && Array.isArray(data.rooms)) {
+										st.updateFromApi({ ok: true, rooms: data.rooms });
+									}
+								}
+							} catch (_e) {
+								st.load().catch(() => {});
+							} finally {
+								st._roomSyncInFlight[roomId] = false;
+								if (st._roomPendingPatch[roomId]) {
+									st._roomSyncInFlight[roomId] = true;
+									drain();
+								}
+							}
+						};
+						drain();
+					},
+					persistRoomSessionMap() {
+						try {
+							const clean = {};
+							for (const [rid, sid] of Object.entries(st.roomSessionMap || {})) {
+								if (rid && sid && !String(sid).startsWith("__opt_tab_")) {
+									clean[rid] = sid;
+								}
+							}
+							window.localStorage.setItem("dsh_group_room_session_map_v1", JSON.stringify(clean));
+						} catch (_e) {}
+					},
 					bindSessionToRoom(sessionId, roomId) {
 						if (!sessionId || !roomId) return;
 						const prevSid = st.roomSessionMap[roomId];
-						if (prevSid && prevSid !== sessionId && String(prevSid).startsWith("__opt_tab_")) {
+						if (prevSid && prevSid !== sessionId) {
 							delete st.sessionRoomMap[prevSid];
+						}
+						const prevRoom = st.sessionRoomMap[sessionId];
+						if (prevRoom && prevRoom !== roomId && st.roomSessionMap[prevRoom] === sessionId) {
+							delete st.roomSessionMap[prevRoom];
 						}
 						const changed = st.roomSessionMap[roomId] !== sessionId || st.sessionRoomMap[sessionId] !== roomId;
 						st.roomSessionMap[roomId] = sessionId;
 						st.sessionRoomMap[sessionId] = roomId;
-						if (changed) st.emit();
+						if (changed) {
+							st.persistRoomSessionMap();
+							st.emit();
+							globalThis.__dshBrowserTabsStore?.emit?.();
+						}
 					},
 					unbindSession(sessionId) {
 						if (!sessionId) return;
@@ -2059,7 +2333,9 @@ function patchWorkspaceClient(rootDir: string): void {
 							if (st.roomSessionMap[roomId] === sessionId) {
 								delete st.roomSessionMap[roomId];
 							}
+							st.persistRoomSessionMap();
 							st.emit();
+							globalThis.__dshBrowserTabsStore?.emit?.();
 						}
 					},
 					getRoomForSession(sessionId) {
@@ -2074,20 +2350,14 @@ function patchWorkspaceClient(rootDir: string): void {
 							st.activeRoomMode = true;
 							if (changed) {
 								st.emit();
-								fetch("/api/superagent-groups/active-room", {
-									method: "POST",
-									headers: { "content-type": "application/json" },
-									body: JSON.stringify({ roomId })
-								}).catch(() => {});
 							}
-						} else if (st.activeRoomMode) {
-							st.activeRoomMode = false;
-							st.emit();
-							fetch("/api/superagent-groups/active-room", {
-								method: "POST",
-								headers: { "content-type": "application/json" },
-								body: JSON.stringify({ roomId: null })
-							}).catch(() => {});
+							st.syncServerActiveRoom(roomId);
+						} else {
+							if (st.activeRoomMode) {
+								st.activeRoomMode = false;
+								st.emit();
+							}
+							st.syncServerActiveRoom(null);
 						}
 					},
 					resolveRoomMemberStatus(kind, member, rm) {
@@ -2161,13 +2431,22 @@ function patchWorkspaceClient(rootDir: string): void {
 							botCount: (rm.connectorIds || []).length
 						};
 					},
-					emit() {
+					emit(sync = false) {
 						st.rev++;
-						st.listeners.forEach((fn) => {
+						const notifyAll = () => {
+							st.listeners.forEach((fn) => {
+								try {
+									fn();
+								} catch (_e) {}
+							});
+						};
+						if (sync && typeof react_dom?.flushSync === "function") {
 							try {
-								fn();
+								react_dom.flushSync(notifyAll);
+								return;
 							} catch (_e) {}
-						});
+						}
+						notifyAll();
 					},
 					subscribe(fn) {
 						st.listeners.add(fn);
@@ -2239,33 +2518,45 @@ function patchWorkspaceClient(rootDir: string): void {
 						}
 					},
 					enterGroupRoom(roomId, navHelpers) {
+						const tabStore = globalThis.__dshBrowserTabsStore;
+						const roomTabId = "__room__:" + roomId;
+						if (tabStore) {
+							tabStore.noTabsHomeMode = false;
+							tabStore.closedIds.delete(roomTabId);
+							if (!tabStore.order.includes(roomTabId)) tabStore.order.push(roomTabId);
+						}
 						st.activeRoomId = roomId;
 						st.activeRoomMode = true;
 						st.emit();
-						fetch("/api/superagent-groups/active-room", {
-							method: "POST",
-							headers: { "content-type": "application/json" },
-							body: JSON.stringify({ roomId })
-						}).catch(() => {});
+						st.syncServerActiveRoom(roomId);
 						globalThis.__dshSelectMainPanel?.(null);
 						if (navHelpers) {
 							const { workspaces, startSession, open, list } = navHelpers;
 							const rm = (st.rooms || []).find((r) => r.id === roomId);
 							const title = rm ? rm.name : "群组协同会话";
-							const tabStore = globalThis.__dshBrowserTabsStore;
-							const mappedSid = st.roomSessionMap[roomId];
+							let mappedSid = st.roomSessionMap[roomId];
+							const hasLiveList = list?.byId && Object.keys(list.byId).length > 0;
+							if (mappedSid && !String(mappedSid).startsWith("__opt_tab_") && hasLiveList && !list.byId[mappedSid]) {
+								st.unbindSession(mappedSid);
+								mappedSid = void 0;
+							}
 							if (mappedSid && !tabStore?.closedIds?.has(mappedSid)) {
 								if (tabStore?.optimisticTabs?.has(mappedSid)) {
 									tabStore.noTabsHomeMode = false;
 									tabStore.optimisticActiveId = mappedSid;
 									tabStore.setCustomTitle?.(mappedSid, title);
+									tabStore.emit(true);
 									return;
 								}
 								st.bindSessionToRoom(mappedSid, roomId);
 								if (tabStore) {
 									tabStore.noTabsHomeMode = false;
 									tabStore.optimisticActiveId = void 0;
+									tabStore.activeSessionId = mappedSid;
+									globalThis.__dshActiveSessionId = mappedSid;
+									globalThis.__dshMainRetainedSessionId = mappedSid;
 									tabStore.setCustomTitle?.(mappedSid, title);
+									tabStore.emit(true);
 								}
 								open?.(mappedSid);
 								return;
@@ -2278,9 +2569,12 @@ function patchWorkspaceClient(rootDir: string): void {
 									tabStore.noTabsHomeMode = false;
 									tabStore.homeStandbySessionId = void 0;
 									tabStore.awaitingStandbySession = false;
-									if (!tabStore.order.includes(standbyId)) tabStore.order.push(standbyId);
 									tabStore.optimisticActiveId = void 0;
+									tabStore.activeSessionId = standbyId;
+									globalThis.__dshActiveSessionId = standbyId;
+									globalThis.__dshMainRetainedSessionId = standbyId;
 									tabStore.setCustomTitle?.(standbyId, title);
+									tabStore.emit(true);
 									open?.(standbyId);
 									return;
 								}
@@ -2331,14 +2625,11 @@ function patchWorkspaceClient(rootDir: string): void {
 						return null;
 					},
 					leaveGroupRoom() {
-						if (!st.activeRoomMode) return;
-						st.activeRoomMode = false;
-						st.emit();
-						fetch("/api/superagent-groups/active-room", {
-							method: "POST",
-							headers: { "content-type": "application/json" },
-							body: JSON.stringify({ roomId: null })
-						}).catch(() => {});
+						if (st.activeRoomMode) {
+							st.activeRoomMode = false;
+							st.emit();
+						}
+						st.syncServerActiveRoom(null);
 					},
 					setGroupExpanded(expanded) {
 						st.groupExpanded = expanded;
@@ -2353,6 +2644,17 @@ function patchWorkspaceClient(rootDir: string): void {
 						if (Array.isArray(data.agents)) st.agents = data.agents;
 						if (Array.isArray(data.rooms)) {
 							st.rooms = data.rooms;
+							const liveRoomIds = new Set(st.rooms.map((r) => r.id));
+							let mapPruned = false;
+							for (const rid of Object.keys(st.roomSessionMap || {})) {
+								if (!liveRoomIds.has(rid)) {
+									const sid = st.roomSessionMap[rid];
+									delete st.roomSessionMap[rid];
+									if (sid && st.sessionRoomMap[sid] === rid) delete st.sessionRoomMap[sid];
+									mapPruned = true;
+								}
+							}
+							if (mapPruned) st.persistRoomSessionMap();
 							if (st.rooms.length > 0 && !st.rooms.some((r) => r.id === st.activeRoomId)) {
 								st.activeRoomId = st.rooms[0].id;
 							}

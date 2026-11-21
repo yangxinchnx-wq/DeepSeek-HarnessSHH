@@ -183,3 +183,170 @@ export function deriveVisibleTabIds(params: {
     shouldExitHomeMode,
   };
 }
+
+export type SessionSwitchSource = 'tabs' | 'sidebar' | 'other';
+export type SessionSwitchDirection =
+  | 'slide-left'
+  | 'slide-right'
+  | 'slide-up'
+  | 'slide-down'
+  | 'fade-up';
+
+/**
+ * Resolves the spatial transition direction when switching between two sessions
+ * so tab switches glide horizontally and sidebar switches glide vertically.
+ */
+export function resolveSessionSwitchDirection(
+  order: readonly string[],
+  prevId: string | undefined | null,
+  nextId: string | undefined | null,
+  source: SessionSwitchSource = 'other',
+): SessionSwitchDirection {
+  if (!prevId || !nextId || prevId === nextId) {
+    return 'fade-up';
+  }
+  const prevIdx = order.indexOf(prevId);
+  const nextIdx = order.indexOf(nextId);
+  if (prevIdx === -1 || nextIdx === -1 || prevIdx === nextIdx) {
+    return 'fade-up';
+  }
+  if (source === 'tabs') {
+    return nextIdx > prevIdx ? 'slide-left' : 'slide-right';
+  }
+  if (source === 'sidebar') {
+    return nextIdx > prevIdx ? 'slide-up' : 'slide-down';
+  }
+  return 'fade-up';
+}
+
+export const GROUP_ROOM_TAB_PREFIX = '__room__:';
+
+export function makeGroupRoomTabId(roomId: string): string {
+  return `${GROUP_ROOM_TAB_PREFIX}${roomId}`;
+}
+
+export function parseGroupRoomTabId(tabId: string | undefined | null): string | null {
+  if (!tabId || !tabId.startsWith(GROUP_ROOM_TAB_PREFIX)) return null;
+  const roomId = tabId.slice(GROUP_ROOM_TAB_PREFIX.length);
+  return roomId || null;
+}
+
+export interface GroupRoomLike {
+  id: string;
+  name?: string;
+}
+
+export interface WorkspaceLikeItem {
+  workspaceId: string;
+  path?: string;
+  sessionIds: readonly string[];
+}
+
+/**
+ * Resolves the active tab ID across both regular workspace sessions and group
+ * rooms (including when the active DSH session is a group room's backing session).
+ */
+export function resolveEffectiveActiveTabId(params: {
+  activeRoomMode?: boolean;
+  activeRoomId?: string | null;
+  rawActiveSessionId?: string | null;
+  getRoomForSession?: (sessionId: string) => string | null | undefined;
+}): string {
+  const { activeRoomMode, activeRoomId, rawActiveSessionId, getRoomForSession } = params;
+  if (activeRoomMode && activeRoomId) {
+    return makeGroupRoomTabId(activeRoomId);
+  }
+  if (!rawActiveSessionId) return '';
+  if (parseGroupRoomTabId(rawActiveSessionId)) return rawActiveSessionId;
+  const boundRoomId = getRoomForSession?.(rawActiveSessionId);
+  if (boundRoomId) return makeGroupRoomTabId(boundRoomId);
+  return rawActiveSessionId;
+}
+
+/**
+ * Reconciles top browser tabs strictly 1-to-1 with the left sidebar conversation
+ * list (workspace sessions + group room conversations):
+ * - Excludes deleted/missing, archived, closed, and subagent sessions
+ * - Excludes raw backing DSH sessions bound to a group room (preventing duplicates)
+ * - Includes every visible group room as `__room__:<roomId>` so existing and newly
+ *   created group rooms automatically stay 1-to-1 with the top tab bar
+ * - Preserves user drag order strictly within the live valid set
+ */
+export function reconcileStrictSidebarTabs(params: {
+  workspaces: readonly WorkspaceLikeItem[];
+  allSessionIds: readonly string[];
+  archivedSessionIds: readonly string[];
+  byId: Record<string, (SessionLikeSummary & { cwd?: string }) | undefined>;
+  closedIds: ReadonlySet<string>;
+  groupSessionIds?: ReadonlySet<string>;
+  groupRooms?: readonly GroupRoomLike[];
+  existingOrder: readonly string[];
+}): string[] {
+  const {
+    workspaces,
+    allSessionIds,
+    archivedSessionIds,
+    byId,
+    closedIds,
+    groupSessionIds,
+    groupRooms = [],
+    existingOrder,
+  } = params;
+  const archivedSet = new Set(archivedSessionIds);
+  const explicitWsIds = new Set(workspaces.flatMap((w) => w.sessionIds));
+  const wsPaths = new Set(workspaces.map((w) => w.path).filter(Boolean));
+
+  const isSidebarVisible = (summary: (SessionLikeSummary & { cwd?: string }) | undefined): summary is SessionLikeSummary & { cwd?: string } => {
+    if (!summary || !summary.id || summary.origin === 'subagent') return false;
+    if (archivedSet.has(summary.id) || closedIds.has(summary.id) || groupSessionIds?.has(summary.id)) return false;
+    return true;
+  };
+
+  const validSet = new Set<string>();
+  const validCandidates: string[] = [];
+
+  for (const workspace of workspaces) {
+    const extraIds = allSessionIds.filter((id) => !explicitWsIds.has(id) && byId[id]?.cwd === workspace.path);
+    const wsCandidates = [...workspace.sessionIds].reverse().concat([...extraIds].reverse());
+    for (const id of wsCandidates) {
+      if (!id || validSet.has(id)) continue;
+      if (!isSidebarVisible(byId[id])) continue;
+      validSet.add(id);
+      validCandidates.push(id);
+    }
+  }
+
+  for (const id of allSessionIds) {
+    if (!id || validSet.has(id)) continue;
+    const summary = byId[id];
+    if (!summary || summary.blank || (summary.cwd && wsPaths.has(summary.cwd)) || !isSidebarVisible(summary)) continue;
+    validSet.add(id);
+    validCandidates.push(id);
+  }
+
+  for (const room of groupRooms) {
+    if (!room || !room.id) continue;
+    const roomTabId = makeGroupRoomTabId(room.id);
+    if (validSet.has(roomTabId) || closedIds.has(roomTabId)) continue;
+    validSet.add(roomTabId);
+    validCandidates.push(roomTabId);
+  }
+
+  const nextOrder: string[] = [];
+  const included = new Set<string>();
+  for (const id of existingOrder) {
+    if (validSet.has(id) && !included.has(id)) {
+      nextOrder.push(id);
+      included.add(id);
+    }
+  }
+  for (const id of validCandidates) {
+    if (!included.has(id)) {
+      nextOrder.push(id);
+      included.add(id);
+    }
+  }
+  return nextOrder;
+}
+
+

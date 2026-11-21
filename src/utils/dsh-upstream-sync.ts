@@ -302,6 +302,18 @@ export function applyDshUpstreamSync(rootDir = process.cwd()): void {
   const nmScopeDir = path.join(rootDir, 'node_modules/@deepseek-ai');
   if (!fs.existsSync(nmScopeDir) || !fs.existsSync(assetsDir)) return;
 
+  let installedDshVersion = '0.2.2-rc.5';
+  try {
+    const dshPkgJson = JSON.parse(
+      fs.readFileSync(path.join(nmScopeDir, 'dsh/package.json'), 'utf8'),
+    );
+    if (typeof dshPkgJson?.version === 'string' && dshPkgJson.version.length > 0) {
+      installedDshVersion = dshPkgJson.version;
+    }
+  } catch {
+    // Fallback to 0.2.2-rc.5
+  }
+
   // =========================================================================
   // 1. Web Search & Fetch Settings Split (#7565)
   // =========================================================================
@@ -318,38 +330,44 @@ export function applyDshUpstreamSync(rootDir = process.cwd()): void {
   }
 
   const dshWebDir = path.join(nmScopeDir, 'dsh-web');
+  const dshWebIndexPath = path.join(dshWebDir, 'lib/index.js');
   const dshWebAssetPath = path.join(assetsDir, 'dsh-web-index.js');
   if (fs.existsSync(dshWebDir) && fs.existsSync(dshWebAssetPath)) {
-    fs.copyFileSync(dshWebAssetPath, path.join(dshWebDir, 'lib/index.js'));
-    fs.writeFileSync(path.join(dshWebDir, 'lib/typert.host.js'), WEB_TYPERT_HOST_JS, 'utf8');
-    fs.writeFileSync(
-      path.join(dshWebDir, 'lib/typert.remote-client.js'),
-      WEB_TYPERT_REMOTE_CLIENT_JS,
-      'utf8',
-    );
-    const pkgPath = path.join(dshWebDir, 'package.json');
-    if (fs.existsSync(pkgPath)) {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      pkg.exports = {
-        ...pkg.exports,
-        '.': {
-          types: './lib/types/index.d.ts',
-          default: './lib/index.js',
-        },
-        './typert': {
-          default: './lib/typert.host.js',
-        },
-        './remote': {
-          default: './lib/typert.remote-client.js',
-        },
-      };
-      if (!pkg.dependencies?.['@deepseek-ai/dsh-typert']) {
-        pkg.dependencies = {
-          ...pkg.dependencies,
-          '@deepseek-ai/dsh-typert': '0.2.2-rc.3',
+    const existingWebCode = fs.existsSync(dshWebIndexPath)
+      ? fs.readFileSync(dshWebIndexPath, 'utf8')
+      : '';
+    if (!existingWebCode.includes('listProviders')) {
+      fs.copyFileSync(dshWebAssetPath, dshWebIndexPath);
+      fs.writeFileSync(path.join(dshWebDir, 'lib/typert.host.js'), WEB_TYPERT_HOST_JS, 'utf8');
+      fs.writeFileSync(
+        path.join(dshWebDir, 'lib/typert.remote-client.js'),
+        WEB_TYPERT_REMOTE_CLIENT_JS,
+        'utf8',
+      );
+      const pkgPath = path.join(dshWebDir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        pkg.exports = {
+          ...pkg.exports,
+          '.': {
+            types: './lib/types/index.d.ts',
+            default: './lib/index.js',
+          },
+          './typert': {
+            default: './lib/typert.host.js',
+          },
+          './remote': {
+            default: './lib/typert.remote-client.js',
+          },
         };
+        if (!pkg.dependencies?.['@deepseek-ai/dsh-typert']) {
+          pkg.dependencies = {
+            ...pkg.dependencies,
+            '@deepseek-ai/dsh-typert': installedDshVersion,
+          };
+        }
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
       }
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
     }
   }
 
@@ -447,13 +465,19 @@ const FETCH_PROVIDER_DESCRIPTION = {
   }
 
   const uiSettingsWebSearchDir = path.join(nmScopeDir, 'dsh-client-ui-settings-web-search');
+  const uiSettingsWebSearchClient = path.join(uiSettingsWebSearchDir, 'lib/client.js');
   const uiSettingsWebSearchAsset = path.join(assetsDir, 'ui-settings-web-search-client.js');
   if (fs.existsSync(uiSettingsWebSearchDir) && fs.existsSync(uiSettingsWebSearchAsset)) {
-    fs.copyFileSync(uiSettingsWebSearchAsset, path.join(uiSettingsWebSearchDir, 'lib/client.js'));
-    const localeDir = path.join(uiSettingsWebSearchDir, 'locale');
-    fs.mkdirSync(localeDir, { recursive: true });
-    for (const [fileName, data] of Object.entries(WEB_SEARCH_LOCALES)) {
-      fs.writeFileSync(path.join(localeDir, fileName), JSON.stringify(data, null, 2) + '\n', 'utf8');
+    const existingWebSearchCode = fs.existsSync(uiSettingsWebSearchClient)
+      ? fs.readFileSync(uiSettingsWebSearchClient, 'utf8')
+      : '';
+    if (!existingWebSearchCode.includes('fetchProvider')) {
+      fs.copyFileSync(uiSettingsWebSearchAsset, uiSettingsWebSearchClient);
+      const localeDir = path.join(uiSettingsWebSearchDir, 'locale');
+      fs.mkdirSync(localeDir, { recursive: true });
+      for (const [fileName, data] of Object.entries(WEB_SEARCH_LOCALES)) {
+        fs.writeFileSync(path.join(localeDir, fileName), JSON.stringify(data, null, 2) + '\n', 'utf8');
+      }
     }
   }
 
@@ -615,14 +639,31 @@ const FETCH_PROVIDER_DESCRIPTION = {
   // 3. MCP Manager Core (#3372)
   // =========================================================================
   const mcpClientDir = path.join(nmScopeDir, 'dsh-mcp-client');
+  const mcpClientIndex = path.join(mcpClientDir, 'lib/index.js');
   const mcpClientAsset = path.join(assetsDir, 'dsh-mcp-client-index.js');
   if (fs.existsSync(mcpClientDir) && fs.existsSync(mcpClientAsset)) {
-    fs.copyFileSync(mcpClientAsset, path.join(mcpClientDir, 'lib/index.js'));
+    const existingMcpClient = fs.existsSync(mcpClientIndex)
+      ? fs.readFileSync(mcpClientIndex, 'utf8')
+      : '';
+    if (!existingMcpClient.includes('probeServer')) {
+      fs.copyFileSync(mcpClientAsset, mcpClientIndex);
+    }
   }
 
   const mcpManagerDir = path.join(nmScopeDir, 'dsh-mcp-manager');
+  const mcpManagerPkgFile = path.join(mcpManagerDir, 'package.json');
   const mcpManagerAsset = path.join(assetsDir, 'dsh-mcp-manager-index.js');
-  if (fs.existsSync(mcpManagerAsset)) {
+  const hasNativeMcpManager = (() => {
+    if (!fs.existsSync(mcpManagerPkgFile)) return false;
+    try {
+      const pkg = JSON.parse(fs.readFileSync(mcpManagerPkgFile, 'utf8'));
+      return pkg.private !== true && fs.existsSync(path.join(mcpManagerDir, 'lib/index.js'));
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!hasNativeMcpManager && fs.existsSync(mcpManagerAsset)) {
     fs.mkdirSync(path.join(mcpManagerDir, 'lib'), { recursive: true });
     fs.mkdirSync(path.join(mcpManagerDir, 'locale'), { recursive: true });
     fs.copyFileSync(mcpManagerAsset, path.join(mcpManagerDir, 'lib/index.js'));
@@ -646,7 +687,7 @@ const FETCH_PROVIDER_DESCRIPTION = {
     const mcpManagerPkg = {
       name: '@deepseek-ai/dsh-mcp-manager',
       description: 'Unified MCP server manager across Settings and plugin contributors',
-      version: '0.2.2-rc.3',
+      version: installedDshVersion,
       private: true,
       type: 'module',
       dsh: {
@@ -675,14 +716,14 @@ const FETCH_PROVIDER_DESCRIPTION = {
       },
       dependencies: {
         '@deepseek-ai/cordis': '^4.1.0',
-        '@deepseek-ai/dsh-mcp-client': '0.2.2-rc.3',
-        '@deepseek-ai/dsh-settings': '0.2.2-rc.3',
-        '@deepseek-ai/dsh-typert': '0.2.2-rc.3',
+        '@deepseek-ai/dsh-mcp-client': installedDshVersion,
+        '@deepseek-ai/dsh-settings': installedDshVersion,
+        '@deepseek-ai/dsh-typert': installedDshVersion,
         '@deepseek-ai/schemastery': '~3.19.0',
       },
     };
     fs.writeFileSync(
-      path.join(mcpManagerDir, 'package.json'),
+      mcpManagerPkgFile,
       JSON.stringify(mcpManagerPkg, null, 2) + '\n',
       'utf8',
     );
@@ -704,10 +745,10 @@ const FETCH_PROVIDER_DESCRIPTION = {
   const webAppPkgPath = path.join(nmScopeDir, 'dsh-web-app/package.json');
   if (fs.existsSync(webAppPkgPath)) {
     const pkg = JSON.parse(fs.readFileSync(webAppPkgPath, 'utf8'));
-    if (pkg.dependencies?.['@deepseek-ai/dsh-mcp-manager'] !== '0.2.2-rc.3') {
+    if (pkg.dependencies?.['@deepseek-ai/dsh-mcp-manager'] !== installedDshVersion) {
       pkg.dependencies = {
         ...pkg.dependencies,
-        '@deepseek-ai/dsh-mcp-manager': '0.2.2-rc.3',
+        '@deepseek-ai/dsh-mcp-manager': installedDshVersion,
       };
       fs.writeFileSync(webAppPkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
     }
@@ -734,7 +775,7 @@ const FETCH_PROVIDER_DESCRIPTION = {
       /\t\tconst TYPERT_REMOTE\$WEB = \{[\s\S]*?const TYPERT_REMOTE\$MCP_MANAGER = \{[\s\S]*?\t\t\};\n\t\t(?=async function apply\(ctx\))/,
       '',
     );
-    if (!code.includes('createTypertRemoteInfo({\n\tpackage: "@deepseek-ai/dsh-web"')) {
+    if (!code.includes('"@deepseek-ai/dsh-web"') && !code.includes('`@deepseek-ai/dsh-web`')) {
       const webSpec = WEB_REMOTE_SPEC_CODE.replace(/\bz\./g, 'zod.');
       const mcpSpec = MCP_MANAGER_REMOTE_SPEC_CODE.replace(/\bz\./g, 'zod.');
       const mountDecls = `\t\tconst TYPERT_REMOTE$WEB = createTypertRemoteInfo(${webSpec}, zod);\n\t\tconst TYPERT_REMOTE$MCP_MANAGER = createTypertRemoteInfo(${mcpSpec}, zod);\n`;
@@ -769,9 +810,15 @@ const FETCH_PROVIDER_DESCRIPTION = {
   // 4. Desktop Update Channels (#7495) & Windows CLI Short-Path Fix (#7709)
   // =========================================================================
   const uiSettingsGeneralDir = path.join(nmScopeDir, 'dsh-client-ui-settings-general');
+  const uiSettingsGeneralClient = path.join(uiSettingsGeneralDir, 'lib/client.js');
   const uiSettingsGeneralAsset = path.join(assetsDir, 'ui-settings-general-client.js');
   if (fs.existsSync(uiSettingsGeneralDir) && fs.existsSync(uiSettingsGeneralAsset)) {
-    fs.copyFileSync(uiSettingsGeneralAsset, path.join(uiSettingsGeneralDir, 'lib/client.js'));
+    const existingGeneral = fs.existsSync(uiSettingsGeneralClient)
+      ? fs.readFileSync(uiSettingsGeneralClient, 'utf8')
+      : '';
+    if (!existingGeneral.includes('DesktopChannelRow')) {
+      fs.copyFileSync(uiSettingsGeneralAsset, uiSettingsGeneralClient);
+    }
   }
 
   const clientRunnerPath = path.join(nmScopeDir, 'dsh-cordis-client-runner/lib/client.js');
@@ -806,7 +853,10 @@ const FETCH_PROVIDER_DESCRIPTION = {
 
   const dshDir = path.join(nmScopeDir, 'dsh');
   if (fs.existsSync(dshDir)) {
-    fs.writeFileSync(path.join(dshDir, 'lib/installed-bin.js'), INSTALLED_BIN_JS, 'utf8');
+    const installedBinPath = path.join(dshDir, 'lib/installed-bin.js');
+    if (!fs.existsSync(installedBinPath)) {
+      fs.writeFileSync(installedBinPath, INSTALLED_BIN_JS, 'utf8');
+    }
     const dshPkgPath = path.join(dshDir, 'package.json');
     if (fs.existsSync(dshPkgPath)) {
       const pkg = JSON.parse(fs.readFileSync(dshPkgPath, 'utf8'));
@@ -816,10 +866,10 @@ const FETCH_PROVIDER_DESCRIPTION = {
           default: './lib/installed-bin.js',
         },
       };
-      if (pkg.dependencies?.['@deepseek-ai/dsh-mcp-manager'] !== '0.2.2-rc.3') {
+      if (pkg.dependencies?.['@deepseek-ai/dsh-mcp-manager'] !== installedDshVersion) {
         pkg.dependencies = {
           ...pkg.dependencies,
-          '@deepseek-ai/dsh-mcp-manager': '0.2.2-rc.3',
+          '@deepseek-ai/dsh-mcp-manager': installedDshVersion,
         };
       }
       fs.writeFileSync(dshPkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
@@ -1052,9 +1102,11 @@ const FETCH_PROVIDER_DESCRIPTION = {
   // 8. 0.2.2-rc.1 / master Update 4: Subagent Catalog Names (#7697) &
   //    Repeated Fork Title Suffixes (#7472)
   // =========================================================================
-  const subagentIndex = path.join(nmScopeDir, 'dsh-subagent/lib/index.js');
+  const subagentDir = path.join(nmScopeDir, 'dsh-subagent');
+  const subagentIndex = path.join(subagentDir, 'lib/index.js');
   if (fs.existsSync(subagentIndex)) {
     let code = fs.readFileSync(subagentIndex, 'utf8');
+    let changed = false;
     if (!code.includes('SiblingNameReservations')) {
       const namingHelpers = `//#region lib/types/names.js
 const ROOT_AGENT_NAME = "lead";
@@ -1128,11 +1180,76 @@ function catalogNames(entries) {
         'if (spec.delivery === "parent") establishExternalCatalogChild(parent.session, activation.childId, spec.label);',
         'if (spec.delivery === "parent") establishExternalCatalogChild(parent.session, activation.childId, spec.label, spec.name);',
       );
+      changed = true;
+    }
+
+    // 0.2.2-rc.3 compatibility: ensure tryReserve, agentAddress("lead/...", id), and named exports exist
+    const rc3AgentAddrOrig = `function agentAddress(path, id) {\n\tif (path === "") return ROOT_AGENT_NAME;\n\treturn path ?? id;\n}`;
+    const rc3AgentAddrPatched = `function agentAddress(path, id) {\n\tif (path === "") return ROOT_AGENT_NAME;\n\tif (typeof path === "string" && path.startsWith(ROOT_AGENT_NAME + "/") && typeof id === "string" && id.length > 0) return \`\${path}@\${id}\`;\n\treturn path ?? id;\n}`;
+    if (code.includes(rc3AgentAddrOrig)) {
+      code = code.replace(rc3AgentAddrOrig, rc3AgentAddrPatched);
+      changed = true;
+    }
+
+    const rc3SiblingOrig = `var SiblingNameReservations = class {\n\tpending = /* @__PURE__ */ new Map();`;
+    const rc3SiblingPatched = `var SiblingNameReservations = class {\n\tpending = /* @__PURE__ */ new Map();\n\treservedByParent = /* @__PURE__ */ new Map();\n\ttryReserve(parentSessionId, name) {\n\t\tif (!isAgentName(name)) return void 0;\n\t\tlet set = this.reservedByParent.get(parentSessionId);\n\t\tif (set === void 0) {\n\t\t\tset = /* @__PURE__ */ new Set();\n\t\t\tthis.reservedByParent.set(parentSessionId, set);\n\t\t}\n\t\tif (set.has(name)) return void 0;\n\t\tset.add(name);\n\t\tlet released = false;\n\t\treturn () => {\n\t\t\tif (released) return;\n\t\t\treleased = true;\n\t\t\tset.delete(name);\n\t\t\tif (set.size === 0) this.reservedByParent.delete(parentSessionId);\n\t\t};\n\t}`;
+    if (code.includes(rc3SiblingOrig) && !code.includes('tryReserve(parentSessionId, name)')) {
+      code = code.replace(rc3SiblingOrig, rc3SiblingPatched);
+      changed = true;
+    }
+
+    // Deduplicate any accidental repeated export block from earlier runs
+    const dupExportPrefix =
+      'ROOT_AGENT_NAME, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath,';
+    if (code.includes(dupExportPrefix)) {
       code = code.replace(
-        'export { AssistantOutputFold,',
-        'export { AssistantOutputFold, ROOT_AGENT_NAME, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath,',
+        dupExportPrefix,
+        'ROOT_AGENT_NAME, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath,',
       );
+      changed = true;
+    }
+
+    if (!code.includes('ROOT_AGENT_NAME, SiblingNameReservations,')) {
+      if (code.includes('export { AssistantOutputFold, NO_START_CAPABILITIES, ROOT_AGENT_NAME,')) {
+        code = code.replace(
+          'export { AssistantOutputFold, NO_START_CAPABILITIES, ROOT_AGENT_NAME,',
+          'export { AssistantOutputFold, NO_START_CAPABILITIES, ROOT_AGENT_NAME, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath,',
+        );
+        changed = true;
+      } else if (code.includes('export { AssistantOutputFold,')) {
+        code = code.replace(
+          'export { AssistantOutputFold,',
+          'export { AssistantOutputFold, ROOT_AGENT_NAME, SiblingNameReservations, agentAddress, catalogNames, establishCatalogChild, establishExternalCatalogChild, isAgentName, joinAgentPath, parentAgentPath,',
+        );
+        changed = true;
+      }
+    }
+
+    if (changed) {
       fs.writeFileSync(subagentIndex, code, 'utf8');
+    }
+
+    // Ensure @deepseek-ai/dsh-subagent/internal exists for @deepseek-ai/dsh-experimental-agent-team
+    const subagentInternalPath = path.join(subagentDir, 'lib/internal.js');
+    if (!fs.existsSync(subagentInternalPath)) {
+      fs.writeFileSync(
+        subagentInternalPath,
+        `export async function steerHostSubagentPrompt(subagents, _root, targetId, content, source, signal) {\n\tif (typeof subagents?.requireManager === "function") {\n\t\treturn subagents.requireManager().deliverPrompt(targetId, content, {\n\t\t\tsource,\n\t\t\tsignal,\n\t\t\tdelivery: "steer"\n\t\t});\n\t}\n\treturn void 0;\n}\n`,
+        'utf8',
+      );
+    }
+    const subagentPkgPath = path.join(subagentDir, 'package.json');
+    if (fs.existsSync(subagentPkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(subagentPkgPath, 'utf8'));
+      if (!pkg.exports?.['./internal']) {
+        pkg.exports = {
+          ...pkg.exports,
+          './internal': {
+            default: './lib/internal.js',
+          },
+        };
+        fs.writeFileSync(subagentPkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+      }
     }
   }
 
@@ -1411,12 +1528,19 @@ function maxStatePayloadBytes(maxFrameBytes) {
       }
       if (
         communityCode.includes('"0.2.2-rc.1"') &&
-        !communityCode.includes('"0.2.2-rc.3"')
+        !communityCode.includes('"0.2.2-rc.5"')
       ) {
-        communityCode = communityCode.replace(
-          '"0.2.2-rc.1"',
-          '"0.2.2-rc.1",\n  "0.2.2-rc.2",\n  "0.2.2-rc.3"',
-        );
+        if (communityCode.includes('"0.2.2-rc.3"')) {
+          communityCode = communityCode.replace(
+            '"0.2.2-rc.3"',
+            '"0.2.2-rc.3",\n  "0.2.2-rc.4",\n  "0.2.2-rc.5"',
+          );
+        } else {
+          communityCode = communityCode.replace(
+            '"0.2.2-rc.1"',
+            '"0.2.2-rc.1",\n  "0.2.2-rc.2",\n  "0.2.2-rc.3",\n  "0.2.2-rc.4",\n  "0.2.2-rc.5"',
+          );
+        }
         communityChanged = true;
       }
       if (communityCode.includes('const version = readVersion(reader, aiBase, "dsh-agent-loop");')) {
@@ -1828,23 +1952,244 @@ function applyClientRuntimeResiliencePatches(nmScopeDir: string): void {
       fs.writeFileSync(uiLayoutClientPath, ulCode, 'utf8');
     }
   }
+
+  // 8. dsh-client-ui-workspace/lib/client.js (0.2.2-rc.3 minified bundle):
+  //    - Connect left sidebar conversations and top BrowserTaskTabsBar two-way:
+  //      * Show all open blank ("新会话") and titled conversations in the left sidebar in tab order
+  //      * Always mint a fresh session on "新会话" (reuseBlank: false) and register a corresponding top tab
+  //      * Keep selection, custom titles, tab close, and session archive synchronized in real time
+  const uiWorkspaceClientPath = path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js');
+  if (fs.existsSync(uiWorkspaceClientPath)) {
+    let wsCode = fs.readFileSync(uiWorkspaceClientPath, 'utf8');
+    let wsChanged = false;
+
+    const replaceOnce = (anchor: string, replacement: string) => {
+      if (wsCode.includes(anchor)) {
+        wsCode = wsCode.replace(anchor, replacement);
+        wsChanged = true;
+      }
+    };
+
+    const helperFn =
+      'function __dshMainSessionId(list){const retained=globalThis.__dshMainRetainedSessionId??globalThis.__dshBrowserTabsStore?.activeSessionId;if(retained&&list?.byId?.[retained])return retained;return Object.values(list.byId).find(session=>(session.retainedBy.mainView??0)>0)?.id}';
+
+    replaceOnce(
+      'function mainSessionId(list){return Object.values(list.byId).find(session=>(session.retainedBy.mainView??0)>0)?.id}',
+      `${helperFn}function mainSessionId(list){return __dshMainSessionId(list)}`,
+    );
+    // Self-heal earlier broken patch if already present on disk
+    replaceOnce(
+      'function mainSessionId(list){const retained=globalThis.__dshMainRetainedSessionId??globalThis.__dshBrowserTabsStore?.activeSessionId;if(retained&&list?.byId?.[retained])return retained;return mainSessionId(list)}',
+      `${helperFn}function mainSessionId(list){return __dshMainSessionId(list)}`,
+    );
+    replaceOnce(
+      'const mainSessionId=mainSessionId(list);',
+      'const mainSessionId=__dshMainSessionId(list);',
+    );
+
+    const inlineMainViewExpr =
+      'Object.values(list.byId).find(session=>(session.retainedBy.mainView??0)>0)?.id';
+    const helperEndIdx = wsCode.indexOf('function mainSessionId(list){return __dshMainSessionId(list)}');
+    if (helperEndIdx !== -1) {
+      const splitAt = helperEndIdx + 'function mainSessionId(list){return __dshMainSessionId(list)}'.length;
+      const head = wsCode.slice(0, splitAt);
+      const tail = wsCode.slice(splitAt);
+      if (tail.includes(inlineMainViewExpr)) {
+        wsCode = head + tail.replaceAll(inlineMainViewExpr, '__dshMainSessionId(list)');
+        wsChanged = true;
+      }
+    }
+
+    replaceOnce(
+      'function orderByRecency(sessionIds,summaries){return sessionIds.flatMap(id=>{const summary=summaries[id];if(summary===void 0)return[];return[{id,rank:summary.updatedAt}]}).sort((a,b)=>{if(a.rank!==b.rank)return b.rank-a.rank;return a.id<b.id?-1:1}).map(member=>member.id)}',
+      'function orderByRecency(sessionIds,summaries){const base=[...sessionIds].reverse().filter(id=>summaries[id]!==void 0);const tabOrder=globalThis.__dshBrowserTabsStore?.order;if(!Array.isArray(tabOrder)||tabOrder.length===0)return base;const baseSet=new Set(base);const fromTabs=tabOrder.filter(id=>baseSet.has(id));const rest=base.filter(id=>!fromTabs.includes(id));return[...fromTabs,...rest]}',
+    );
+
+    replaceOnce(
+      'function pinCurrentBlank(order,currentBlank){if(currentBlank===void 0)return[...order];return[currentBlank,...order.filter(id=>id!==currentBlank)]}',
+      'function pinCurrentBlank(order,_currentBlank){return[...order]}',
+    );
+
+    replaceOnce(
+      'function sessionVisible(session,current,archived,archivedFilter){if(session.origin===`subagent`)return false;if(session.blank&&session.id!==current)return false;switch(archivedFilter){case`default`:return!archived.has(session.id);case`show`:return true;case`only`:return archived.has(session.id);default:return assertNever$1(archivedFilter)}}',
+      'function sessionVisible(session,_current,archived,archivedFilter){if(session.origin===`subagent`)return false;if(globalThis.__dshGroupHubStore?.getRoomForSession?.(session.id))return false;const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){if(tabStore.closedIds.has(session.id))return archivedFilter===`show`||archivedFilter===`only`;if(tabStore.noTabsHomeMode&&(session.id===tabStore.homeStandbySessionId||session.blank))return false}switch(archivedFilter){case`default`:return!archived.has(session.id);case`show`:return true;case`only`:return archived.has(session.id);default:return assertNever$1(archivedFilter)}}',
+    );
+
+    replaceOnce(
+      'function sectionMembers(members,pinned,archived){const placeholders=[];const leading=[];const rest=[];for(const member of members)if(member.blank)placeholders.push(member);else if(!archived.has(member.id)&&pinned.has(member.id))leading.push(member);else rest.push(member);return[...placeholders,...leading,...rest]}',
+      'function sectionMembers(members,pinned,archived){const leading=[];const rest=[];for(const member of members)if(!archived.has(member.id)&&pinned.has(member.id))leading.push(member);else rest.push(member);return[...leading,...rest]}',
+    );
+
+    replaceOnce(
+      'function sessionTitle(session){return session.blank?``:session.title?.trim()??``}',
+      'function sessionTitle(session){const custom=globalThis.__dshBrowserTabsStore?.getCustomTitle?.(session.id);if(custom)return custom;return session.title?.trim()||(session.blank?``:``)}',
+    );
+
+    replaceOnce(
+      'function groupByWorkspace(list,workspaces,archived,archivedFilter,ungroupedOrder){const current=mainSessionId(list);const groups=[];const accounted=new Set;for(const workspace of workspaces){const members=[];for(const id of workspace.sessionIds){const summary=list.byId[id];if(summary===void 0)continue;accounted.add(id);if(!sessionVisible(summary,current,archived,archivedFilter))continue;members.push(summary)}if(archivedFilter===`only`&&members.length===0)continue;groups.push(buildGroup(workspace.workspaceId,workspace.workspaceId,workspace.path,Date.parse(workspace.createdAt),workspace.title,members))}const stray=list.ids.map(id=>list.byId[id]).filter(s=>s!==void 0&&!accounted.has(s.id)&&sessionVisible(s,current,archived,archivedFilter));if(stray.length>0)groups.push(buildGroup(``,void 0,void 0,void 0,``,orderedUngrouped(stray,ungroupedOrder,list.byId)));return groups}',
+      'function groupByWorkspace(list,workspaces,archived,archivedFilter,ungroupedOrder){const current=mainSessionId(list);const groups=[];const accounted=new Set;const explicitIds=new Set(workspaces.flatMap(w=>w.sessionIds));for(const workspace of workspaces){const members=[];const extraIds=list.ids.filter(id=>!explicitIds.has(id)&&list.byId[id]?.cwd===workspace.path);const candidateIds=[...workspace.sessionIds,...extraIds];for(const id of candidateIds){const summary=list.byId[id];if(summary===void 0||accounted.has(id))continue;accounted.add(id);if(!sessionVisible(summary,current,archived,archivedFilter))continue;members.push(summary)}if(archivedFilter===`only`&&members.length===0)continue;groups.push(buildGroup(workspace.workspaceId,workspace.workspaceId,workspace.path,Date.parse(workspace.createdAt),workspace.title,members))}const wsPaths=new Set(workspaces.map(w=>w.path));const stray=list.ids.map(id=>list.byId[id]).filter(s=>s!==void 0&&!s.blank&&!accounted.has(s.id)&&!wsPaths.has(s.cwd)&&sessionVisible(s,current,archived,archivedFilter));if(stray.length>0)groups.push(buildGroup(``,void 0,void 0,void 0,``,orderedUngrouped(stray,ungroupedOrder,list.byId)));return groups}',
+    );
+
+    replaceOnce(
+      'const ungroupedMemberIds=(0,react.useMemo)(()=>{const accounted=new Set(workspaces.flatMap(workspace=>workspace.sessionIds));return list.ids.filter(id=>list.byId[id]!==void 0&&!accounted.has(id))},[list,workspaces]);const orderState=(0,react.useMemo)(()=>({pinnedSessionIds,archivedSessionIds}),[archivedSessionIds,pinnedSessionIds]);const rowState=(0,react.useMemo)(()=>({...orderState,archivedFilter}),[orderState,archivedFilter]);const flatMemberIds=(0,react.useMemo)(()=>sessionMemberIds(list),[list]);const orderedWorkspaces=(0,react.useMemo)(()=>workspaces.map(workspace=>{const memberIds=workspace.sessionIds;const baseOrder=orderBy===`updated`?orderByRecency(memberIds,list.byId):reconcileManualOrder(memberIds,sessionOrderByAccount[workspace.workspaceId],list.byId,orderState);return{...workspace,sessionIds:pinCurrentBlank(baseOrder,currentBlank!==void 0&&memberIds.includes(currentBlank)?currentBlank:void 0)}}),[currentBlank,list.byId,orderBy,orderState,sessionOrderByAccount,workspaces]);',
+      'const tabStoreRev=(0,react.useSyncExternalStore)(cb=>globalThis.__dshBrowserTabsStore?.subscribe?globalThis.__dshBrowserTabsStore.subscribe(cb):()=>{},()=>globalThis.__dshBrowserTabsStore?.getSnapshot?globalThis.__dshBrowserTabsStore.getSnapshot():0);void tabStoreRev;const ungroupedMemberIds=(0,react.useMemo)(()=>{const accounted=new Set(workspaces.flatMap(workspace=>workspace.sessionIds));const wsPaths=new Set(workspaces.map(workspace=>workspace.path));return list.ids.filter(id=>{const s=list.byId[id];return s!==void 0&&!s.blank&&!accounted.has(id)&&!wsPaths.has(s.cwd)})},[list,workspaces,tabStoreRev]);const orderState=(0,react.useMemo)(()=>({pinnedSessionIds,archivedSessionIds}),[archivedSessionIds,pinnedSessionIds]);const rowState=(0,react.useMemo)(()=>({...orderState,archivedFilter,tabStoreRev}),[orderState,archivedFilter,tabStoreRev]);const flatMemberIds=(0,react.useMemo)(()=>sessionMemberIds(list),[list,tabStoreRev]);const orderedWorkspaces=(0,react.useMemo)(()=>{const explicitWsIds=new Set(workspaces.flatMap(w=>w.sessionIds));return workspaces.map(workspace=>{const extraIds=list.ids.filter(id=>!explicitWsIds.has(id)&&list.byId[id]?.cwd===workspace.path);const memberIds=[...extraIds.reverse(),...workspace.sessionIds];const baseOrder=orderBy===`updated`?orderByRecency(memberIds,list.byId):reconcileManualOrder(memberIds,sessionOrderByAccount[workspace.workspaceId],list.byId,orderState);return{...workspace,sessionIds:pinCurrentBlank(baseOrder,currentBlank!==void 0&&memberIds.includes(currentBlank)?currentBlank:void 0)}})},[currentBlank,list.byId,list.ids,orderBy,orderState,sessionOrderByAccount,workspaces,tabStoreRev]);',
+    );
+
+    replaceOnce(
+      'async connectBlank(workspaceId,reuse){const workspace=this.workspaces.list.getSnapshot().items.find(item=>item.workspaceId===workspaceId);if(workspace===void 0)throw new Error(`uiWorkspace.connectWorkspace: unknown workspace ${workspaceId}`);const inflight=this.connecting.get(workspaceId);if(inflight!==void 0&&inflight.agentPreset===reuse.agentPreset)return inflight.attempt;const attempt=this.createInWorkspace(workspace,reuse).finally(()=>{if(this.connecting.get(workspaceId)?.attempt===attempt)this.connecting.delete(workspaceId)});this.connecting.set(workspaceId,{agentPreset:reuse.agentPreset,attempt});return attempt}',
+      'async connectBlank(workspaceId,reuse={}){const workspace=this.workspaces.list.getSnapshot().items.find(item=>item.workspaceId===workspaceId);if(workspace===void 0)throw new Error(`uiWorkspace.connectWorkspace: unknown workspace ${workspaceId}`);if(reuse?.reuseBlank!==false){const inflight=this.connecting.get(workspaceId);if(inflight!==void 0&&inflight.agentPreset===reuse?.agentPreset)return inflight.attempt}const attempt=this.createInWorkspace(workspace,reuse).finally(()=>{if(this.connecting.get(workspaceId)?.attempt===attempt)this.connecting.delete(workspaceId)});if(reuse?.reuseBlank!==false)this.connecting.set(workspaceId,{agentPreset:reuse?.agentPreset,attempt});return attempt}',
+    );
+
+    replaceOnce(
+      'createInWorkspace(workspace,options){const archived=this.workspaces.list.getSnapshot().archivedSessionIds;const sessions=this.sessions.list.getSnapshot();const blank=sessions.ids.find(id=>{const summary=sessions.byId[id];const listed=summary?.projectionValues?.agentPreset;return summary!==void 0&&summary.blank&&summary.cwd===workspace.path&&workspace.sessionIds.includes(id)&&!archived.includes(id)&&(options.agentPreset===void 0||typeof listed!==`string`||listed===options.agentPreset)});return this.createNamed({workspaceId:workspace.workspaceId,...blank===void 0?{}:{sessionId:blank},...options.agentPreset===void 0?{}:{agentPreset:options.agentPreset}})}',
+      'createInWorkspace(workspace,options={}){const archived=this.workspaces.list.getSnapshot().archivedSessionIds;const sessions=this.sessions.list.getSnapshot();const blank=options?.reuseBlank===false?void 0:sessions.ids.find(id=>{const summary=sessions.byId[id];const listed=summary?.projectionValues?.agentPreset;return summary!==void 0&&summary.blank&&summary.cwd===workspace.path&&workspace.sessionIds.includes(id)&&!archived.includes(id)&&(options?.agentPreset===void 0||typeof listed!==`string`||listed===options.agentPreset)});return this.createNamed({workspaceId:workspace.workspaceId,...blank===void 0?{}:{sessionId:blank},...options?.agentPreset===void 0?{}:{agentPreset:options.agentPreset}}).then(sessionId=>{globalThis.__dshBrowserTabsStore?.resolveOptimisticTab?.(sessionId);return sessionId})}',
+    );
+
+    replaceOnce(
+      'startSession(workspaceId,options){const{agentPreset,...draft}=options??{};const draftOptions=options===void 0?void 0:draft;const initializeDraft=draftOptions!==void 0&&(draftOptions.prompt!==void 0||(draftOptions.whenDraftExists??(draftOptions.clearPreviousDraft===true?`replace`:`keep`))===`replace`);const workspace=this.workspaces.list.getSnapshot();const sessions=this.sessions.list.getSnapshot();const current=this.mainReference?.sessionId;const currentWorkspaceId=current===void 0?void 0:workspace.items.find(item=>item.sessionIds.includes(current))?.workspaceId;const recent=workspace.phase===`ready`&&sessions.phase===`ready`?recentWorkspace(workspace.items,sessions.byId):void 0;const target=workspaceId??currentWorkspaceId??recent;if(target===void 0){if(initializeDraft){this.notify({kind:`createFailed`,message:this.ctx.locale.bind(`workspace`)(`draft.workspaceRequired`)});return}this.clearMain();return}this.openWorkspace(target,initializeDraft?id=>{const binding=this.sessions.binding(id);if(binding===void 0)this.draftPreparationFailed();this.prepareDraft(binding,draftOptions)}:void 0,agentPreset===void 0?{}:{agentPreset}).catch(reason=>{console.warn(`new session failed:`,reason)})}',
+      'startSession(workspaceId,options){const{agentPreset,reuseBlank,__fromCreateNewTab,...draft}=options??{};const draftOptions=options===void 0?void 0:draft;const initializeDraft=draftOptions!==void 0&&(draftOptions.prompt!==void 0||(draftOptions.whenDraftExists??(draftOptions.clearPreviousDraft===true?`replace`:`keep`))===`replace`);if(!__fromCreateNewTab&&!initializeDraft&&typeof globalThis.__dshCreateNewTab===`function`){globalThis.__dshCreateNewTab(this.mainReference?.sessionId,{workspaceId,agentPreset});return}const workspace=this.workspaces.list.getSnapshot();const sessions=this.sessions.list.getSnapshot();const current=this.mainReference?.sessionId;const currentWorkspaceId=current===void 0?void 0:workspace.items.find(item=>item.sessionIds.includes(current))?.workspaceId;const recent=workspace.phase===`ready`&&sessions.phase===`ready`?recentWorkspace(workspace.items,sessions.byId):void 0;const target=workspaceId??currentWorkspaceId??recent??workspace.items[0]?.workspaceId;if(target===void 0){if(initializeDraft){this.notify({kind:`createFailed`,message:this.ctx.locale.bind(`workspace`)(`draft.workspaceRequired`)});return}this.clearMain();return}return this.openWorkspace(target,initializeDraft?id=>{const binding=this.sessions.binding(id);if(binding===void 0)this.draftPreparationFailed();this.prepareDraft(binding,draftOptions)}:void 0,{...agentPreset===void 0?{}:{agentPreset},reuseBlank:reuseBlank??false}).catch(reason=>{console.warn(`new session failed:`,reason)})}',
+    );
+
+    replaceOnce(
+      'async archiveSession(sessionId,options={}){await this.workspaces.archiveSession(sessionId,options);if(this.mainReference?.sessionId===sessionId)this.clearMain()}',
+      'async archiveSession(sessionId,options={}){const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){tabStore.closedIds.add(sessionId);const oi=tabStore.order.indexOf(sessionId);if(oi!==-1)tabStore.order.splice(oi,1);tabStore.emit(true)}await this.workspaces.archiveSession(sessionId,options);if(this.mainReference?.sessionId===sessionId)this.clearArchivedCurrent()}',
+    );
+
+    replaceOnce(
+      'async unarchiveSession(sessionId){await this.workspaces.unarchiveSession(sessionId)}',
+      'async unarchiveSession(sessionId){const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){tabStore.closedIds.delete(sessionId);tabStore.noTabsHomeMode=false;tabStore.emit(true)}await this.workspaces.unarchiveSession(sessionId)}',
+    );
+
+    const clearArchivedAnchor =
+      'clearArchivedCurrent(){const current=this.mainReference?.sessionId;if(current===void 0||!this.workspaces.list.getSnapshot().archivedSessionIds.includes(current))return false;this.clearMain();return true}';
+    const clearArchivedPrev =
+      'clearArchivedCurrent(){const current=this.mainReference?.sessionId;const wsSnap=this.workspaces.list.getSnapshot();if(current===void 0||!wsSnap.archivedSessionIds.includes(current))return false;this.clearMain();const tabStore=globalThis.__dshBrowserTabsStore;const sessSnap=this.sessions.list.getSnapshot();const archivedSet=new Set(wsSnap.archivedSessionIds);const closedSet=tabStore?.closedIds??new Set;const remaining=sessSnap.ids.filter(id=>id!==current&&!archivedSet.has(id)&&!closedSet.has(id)&&sessSnap.byId[id]?.origin!==`subagent`);if(remaining.length>0){this.openSession(remaining[remaining.length-1])}else{this.startSession(wsSnap.items[0]?.workspaceId,{reuseBlank:false})}return true}';
+    const clearArchivedNext =
+      'clearArchivedCurrent(){const current=this.mainReference?.sessionId;const wsSnap=this.workspaces.list.getSnapshot();if(current===void 0||!wsSnap.archivedSessionIds.includes(current))return false;this.clearMain();const tabStore=globalThis.__dshBrowserTabsStore;const gStore=globalThis.__dshGroupHubStore;const sessSnap=this.sessions.list.getSnapshot();const archivedSet=new Set(wsSnap.archivedSessionIds);const closedSet=tabStore?.closedIds??new Set;const remaining=sessSnap.ids.filter(id=>id!==current&&!archivedSet.has(id)&&!closedSet.has(id)&&sessSnap.byId[id]?.origin!==`subagent`&&!gStore?.getRoomForSession?.(id));if(remaining.length>0){this.openSession(remaining[remaining.length-1])}else{const openRoomTab=tabStore?.order?.find?.(t=>typeof t===`string`&&t.startsWith(`__room__:`)&&!closedSet.has(t));if(openRoomTab&&gStore?.enterGroupRoom){gStore.enterGroupRoom(openRoomTab.slice(`__room__:`.length),{workspaces:wsSnap.items,startSession:(w,o)=>this.startSession(w,o),open:s=>this.openSession(s),list:sessSnap})}else if(tabStore){tabStore.activeSessionId=``;tabStore.optimisticActiveId=void 0;if(!(gStore?.rooms?.some?.(r=>r?.id&&!closedSet.has(`__room__:`+r.id)))){tabStore.noTabsHomeMode=true}tabStore.emit(true)}}return true}';
+    replaceOnce(clearArchivedAnchor, clearArchivedNext);
+    replaceOnce(clearArchivedPrev, clearArchivedNext);
+
+    replaceOnce(
+      'clearMain(){const previous=this.mainReference;this.mainReference=void 0;this.selection.set({});previous?.release();this.ctx.layout.selectPanel(null)}',
+      'clearMain(){const previous=this.mainReference;this.mainReference=void 0;globalThis.__dshMainRetainedSessionId=void 0;globalThis.__dshActiveSessionId=void 0;this.selection.set({});previous?.release();globalThis.__dshPublishMain?.();this.ctx.layout.selectPanel(null)}',
+    );
+
+    const replaceMainAnchor =
+      'replaceMain(target,signal,panel,beforeOpen){signal.throwIfAborted();const reference=this.sessions.retain(target,{source:`mainView`});try{signal.throwIfAborted();beforeOpen?.(reference.sessionId);if(signal.aborted){reference.release();return}const subagentAddress=typeof target===`string`?this.sessions.subagentAddress(reference.sessionId):target;this.selection.set({sessionId:reference.sessionId,...subagentAddress===void 0?{}:{subagentAddress}})}catch(error){reference.release();throw error}const previous=this.mainReference;this.mainReference=reference;previous?.release();if(panel===`reveal`)this.ctx.layout.selectPanel(null)}';
+    const replaceMainPrev =
+      'replaceMain(target,signal,panel,beforeOpen){signal.throwIfAborted();const reference=this.sessions.retain(target,{source:`mainView`});try{signal.throwIfAborted();globalThis.__dshBrowserTabsStore?.resolveOptimisticTab?.(reference.sessionId);globalThis.__dshGroupHubStore?.syncActiveTabSession?.(reference.sessionId);beforeOpen?.(reference.sessionId);if(signal.aborted){reference.release();return}const subagentAddress=typeof target===`string`?this.sessions.subagentAddress(reference.sessionId):target;this.selection.set({sessionId:reference.sessionId,...subagentAddress===void 0?{}:{subagentAddress}})}catch(error){reference.release();throw error}const previous=this.mainReference;this.mainReference=reference;globalThis.__dshMainRetainedSessionId=reference.sessionId;globalThis.__dshActiveSessionId=reference.sessionId;const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){tabStore.closedIds.delete(reference.sessionId);if(!tabStore.order.includes(reference.sessionId))tabStore.order.push(reference.sessionId);tabStore.activeSessionId=reference.sessionId;tabStore.optimisticActiveId=void 0;tabStore.emit(true)}previous?.release();globalThis.__dshPublishMain?.();if(panel===`reveal`)this.ctx.layout.selectPanel(null)}';
+    const replaceMainPrev2 =
+      'replaceMain(target,signal,panel,beforeOpen){signal.throwIfAborted();const reference=this.sessions.retain(target,{source:`mainView`});const prevSessionId=this.mainReference?.sessionId;try{signal.throwIfAborted();globalThis.__dshBrowserTabsStore?.resolveOptimisticTab?.(reference.sessionId);globalThis.__dshGroupHubStore?.syncActiveTabSession?.(reference.sessionId);beforeOpen?.(reference.sessionId);if(signal.aborted){reference.release();return}const subagentAddress=typeof target===`string`?this.sessions.subagentAddress(reference.sessionId):target;this.selection.set({sessionId:reference.sessionId,...subagentAddress===void 0?{}:{subagentAddress}})}catch(error){reference.release();throw error}const previous=this.mainReference;this.mainReference=reference;globalThis.__dshMainRetainedSessionId=reference.sessionId;globalThis.__dshActiveSessionId=reference.sessionId;if(prevSessionId&&prevSessionId!==reference.sessionId){globalThis.__dshTriggerSessionTransition?.(prevSessionId,reference.sessionId,`sidebar`)}const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){tabStore.closedIds.delete(reference.sessionId);if(!tabStore.order.includes(reference.sessionId))tabStore.order.push(reference.sessionId);tabStore.activeSessionId=reference.sessionId;tabStore.optimisticActiveId=void 0;tabStore.emit(true)}previous?.release();globalThis.__dshPublishMain?.();if(panel===`reveal`)this.ctx.layout.selectPanel(null)}';
+    const replaceMainNext =
+      'replaceMain(target,signal,panel,beforeOpen){signal.throwIfAborted();const reference=this.sessions.retain(target,{source:`mainView`});const prevSessionId=this.mainReference?.sessionId;try{signal.throwIfAborted();globalThis.__dshBrowserTabsStore?.resolveOptimisticTab?.(reference.sessionId);globalThis.__dshGroupHubStore?.syncActiveTabSession?.(reference.sessionId);beforeOpen?.(reference.sessionId);if(signal.aborted){reference.release();return}const subagentAddress=typeof target===`string`?this.sessions.subagentAddress(reference.sessionId):target;this.selection.set({sessionId:reference.sessionId,...subagentAddress===void 0?{}:{subagentAddress}})}catch(error){reference.release();throw error}const previous=this.mainReference;this.mainReference=reference;globalThis.__dshMainRetainedSessionId=reference.sessionId;globalThis.__dshActiveSessionId=reference.sessionId;if(prevSessionId&&prevSessionId!==reference.sessionId){globalThis.__dshTriggerSessionTransition?.(prevSessionId,reference.sessionId,`sidebar`)}const tabStore=globalThis.__dshBrowserTabsStore;if(tabStore){const boundRoom=globalThis.__dshGroupHubStore?.getRoomForSession?.(reference.sessionId);const orderKey=boundRoom?`__room__:`+boundRoom:reference.sessionId;tabStore.closedIds.delete(orderKey);if(!boundRoom)tabStore.closedIds.delete(reference.sessionId);if(!tabStore.order.includes(orderKey))tabStore.order.push(orderKey);tabStore.activeSessionId=reference.sessionId;tabStore.optimisticActiveId=void 0;tabStore.emit(true)}previous?.release();globalThis.__dshPublishMain?.();if(panel===`reveal`)this.ctx.layout.selectPanel(null)}';
+    replaceOnce(replaceMainAnchor, replaceMainNext);
+    replaceOnce(replaceMainPrev, replaceMainNext);
+    replaceOnce(replaceMainPrev2, replaceMainNext);
+
+    replaceOnce(
+      'openSession(target){this.replaceMain(target,this.lifetime.signal,`reveal`)}',
+      'openSession(target){if(!target)return;const nav=AbortSignal.any([this.ctx.layout.beginNavigation(),this.lifetime.signal]);this.replaceMain(target,nav,`reveal`)}',
+    );
+
+    replaceOnce(
+      'const renameSession=async(sessionId,title)=>{const result=await sessions.using(sessionId,{source:`workspaceOperation`},reference=>reference.binding.session.rename(title));if(!result.ok)throw new Error(result.error.message)};',
+      'const renameSession=async(sessionId,title)=>{globalThis.__dshBrowserTabsStore?.setCustomTitle?.(sessionId,title);const result=await sessions.using(sessionId,{source:`workspaceOperation`},reference=>reference.binding.session.rename(title));if(!result.ok)throw new Error(result.error.message)};',
+    );
+
+    if (wsChanged) {
+      fs.writeFileSync(uiWorkspaceClientPath, wsCode, 'utf8');
+    }
+  }
+
+  // 9. dsh-client-ui-renderer/lib/client.js:
+  //    - Keep the outer conversation shell (`main.conversation`, `conversation.header`, main
+  //      `conversation.content`), hero preset button (`conversation.hero.agentPreset`), and
+  //      composer card (`conversation.composer.bar`, `conversation.input.attachments`) persistently
+  //      mounted across session switches so switching sessions never triggers a DOM unmount/flash.
+  const uiRendererClientPath = path.join(nmScopeDir, 'dsh-client-ui-renderer/lib/client.js');
+  if (fs.existsSync(uiRendererClientPath)) {
+    let rCode = fs.readFileSync(uiRendererClientPath, 'utf8');
+    let rChanged = false;
+
+    const sessionMaybeAnchor =
+      'function SessionMaybeEntry({entry,ownerProps,slotKey,slotInjected,hookContext,hasHookContext,children}){const binding=useScopeBinding();const epoch=useMaybeIncarnation(binding);return(0,react_jsx_runtime.jsx)(SessionMaybeEntryBody,{entry,ownerProps,binding,slotKey,slotInjected,hookContext,hasHookContext,children},epoch)}';
+    const sessionMaybePrev =
+      'function SessionMaybeEntry({entry,ownerProps,slotKey,slotInjected,hookContext,hasHookContext,children}){const binding=useScopeBinding();const epoch=useMaybeIncarnation(binding);const keepMounted=slotKey===`main.conversation`||slotKey===`conversation.header`;return(0,react_jsx_runtime.jsx)(SessionMaybeEntryBody,{entry,ownerProps,binding,slotKey,slotInjected,hookContext,hasHookContext,children},keepMounted?`stable`:epoch)}';
+    const sessionMaybeReplace =
+      'function SessionMaybeEntry({entry,ownerProps,slotKey,slotInjected,hookContext,hasHookContext,children}){const binding=useScopeBinding();const epoch=useMaybeIncarnation(binding);const keepMounted=slotKey===`main.conversation`||slotKey===`conversation.header`||slotKey===`conversation.hero.agentPreset`||slotKey===`conversation.composer.bar`||slotKey===`conversation.input.attachments`;return(0,react_jsx_runtime.jsx)(SessionMaybeEntryBody,{entry,ownerProps,binding,slotKey,slotInjected,hookContext,hasHookContext,children},keepMounted?`stable`:epoch)}';
+    if (rCode.includes(sessionMaybeAnchor)) {
+      rCode = rCode.replace(sessionMaybeAnchor, sessionMaybeReplace);
+      rChanged = true;
+    } else if (rCode.includes(sessionMaybePrev)) {
+      rCode = rCode.replace(sessionMaybePrev, sessionMaybeReplace);
+      rChanged = true;
+    }
+
+    const factoryOccAnchor =
+      'function FactoryOccurrence({definition,inputProps,selected,caller,binding,maybeEpoch}){if(definition.scope===`root`)return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller});if(definition.scope===`session`){if(binding.key===void 0)throw new SlotAssemblyError(`strict session factory \'${definition.name}\' rendered without a scope binding`);return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller,scopeBinding:binding},sessionGenerationKeyOf(binding))}return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller,scopeBinding:binding},maybeEpoch)}';
+    const factoryOccReplace =
+      'function FactoryOccurrence({definition,inputProps,selected,caller,binding,maybeEpoch}){if(definition.scope===`root`)return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller});if(definition.scope===`session`){if(binding.key===void 0)throw new SlotAssemblyError(`strict session factory \'${definition.name}\' rendered without a scope binding`);return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller,scopeBinding:binding},sessionGenerationKeyOf(binding))}const stableMain=definition.name===`conversation.content`&&inputProps?.variant===`main`;return(0,react_jsx_runtime.jsx)(FactoryOccurrenceBody,{definition,inputProps,selected,caller,scopeBinding:binding},stableMain?`stable`:maybeEpoch)}';
+    if (rCode.includes(factoryOccAnchor)) {
+      rCode = rCode.replace(factoryOccAnchor, factoryOccReplace);
+      rChanged = true;
+    }
+
+    const scopeIdAnchor =
+      'const scopeIdentity=definition.scope===`root`?`root`:definition.scope===`session`?binding.key===void 0?`session:absent`:`session:${sessionGenerationKeyOf(binding)}`:`session-maybe:${maybeEpoch}`;';
+    const scopeIdReplace =
+      'const scopeIdentity=definition.scope===`root`?`root`:definition.scope===`session`?binding.key===void 0?`session:absent`:`session:${sessionGenerationKeyOf(binding)}`:name===`conversation.content`&&inputProps?.variant===`main`?`session-maybe:stable`:`session-maybe:${maybeEpoch}`;';
+    if (rCode.includes(scopeIdAnchor)) {
+      rCode = rCode.replace(scopeIdAnchor, scopeIdReplace);
+      rChanged = true;
+    }
+
+    if (rChanged) {
+      fs.writeFileSync(uiRendererClientPath, rCode, 'utf8');
+    }
+  }
+
+  // 10. dsh-client-ui-agent-preset/lib/client.js:
+  //     - Preserve the last-ready preset label/options across brief async `seat.load()` windows
+  //       when switching sessions so `.cubgiG_seat` never vanishes for a frame and pops back in.
+  const uiAgentPresetClientPath = path.join(nmScopeDir, 'dsh-client-ui-agent-preset/lib/client.js');
+  if (fs.existsSync(uiAgentPresetClientPath)) {
+    let apCode = fs.readFileSync(uiAgentPresetClientPath, 'utf8');
+    const apAnchor =
+      'const options=(0,react.useMemo)(()=>state.options.filter(option=>developerTools||!requiresCodingTools(option)),[state.options,developerTools]);(0,react.useEffect)(()=>{setOpen(false)},[developerTools,options.length]);const chosen=state.options.find(option=>option.id===state.current);const label=(chosen===void 0?void 0:presetDisplayText(chosen,t))?.name??state.current;const ready=state.options.length>0&&state.current!==``;';
+    const apReplace =
+      'const rawOptions=(0,react.useMemo)(()=>state.options.filter(option=>developerTools||!requiresCodingTools(option)),[state.options,developerTools]);const lastReadyRef=(0,react.useRef)(null);const liveReady=state.options.length>0&&state.current!==``;const chosen=state.options.find(option=>option.id===state.current);const liveLabel=(chosen===void 0?void 0:presetDisplayText(chosen,t))?.name??state.current;if(liveReady){lastReadyRef.current={options:rawOptions,label:liveLabel,current:state.current}}const options=liveReady?rawOptions:lastReadyRef.current?.options??rawOptions;const label=liveReady?liveLabel:lastReadyRef.current?.label??liveLabel;const ready=liveReady||lastReadyRef.current!==null;(0,react.useEffect)(()=>{setOpen(false)},[developerTools,options.length,sessionId]);';
+    if (apCode.includes(apAnchor)) {
+      apCode = apCode.replace(apAnchor, apReplace);
+      fs.writeFileSync(uiAgentPresetClientPath, apCode, 'utf8');
+    }
+  }
 }
 
 function extractTemplateBlock(source: string, startLine: number, hardEndLine: number): string {
   const lines = source.split('\n');
+  let actualStart = startLine;
+  if ((lines[actualStart - 1] ?? '').indexOf('`') === -1) {
+    for (let offset = -5; offset <= 5; offset++) {
+      const candidate = startLine + offset;
+      if (candidate >= 1 && (lines[candidate - 1] ?? '').includes('= `')) {
+        actualStart = candidate;
+        break;
+      }
+    }
+  }
   let end = hardEndLine;
-  for (let i = Math.min(hardEndLine, lines.length); i >= startLine; i--) {
+  for (let i = Math.min(hardEndLine, lines.length); i >= actualStart; i--) {
     if (lines[i - 1].trimEnd().endsWith('`;')) {
       end = i;
       break;
     }
   }
-  const first = lines[startLine - 1] ?? '';
+  const first = lines[actualStart - 1] ?? '';
   const backtickAt = first.indexOf('`');
-  if (backtickAt === -1) throw new Error(`template block start line ${startLine} has no backtick`);
+  if (backtickAt === -1) throw new Error(`template block start line ${actualStart} has no backtick`);
   const head = first.slice(backtickAt + 1);
   const tail = (lines[end - 1] ?? '').replace(/`;\s*$/, '');
-  const body = [head, ...lines.slice(startLine, end - 1), tail].join('\n');
+  const body = [head, ...lines.slice(actualStart, end - 1), tail].join('\n');
   return body;
 }
 
@@ -1871,6 +2216,34 @@ function deriveCssClassMap(bundleCode: string, distinctiveKey: string, keys: str
   return map;
 }
 
+function extractNamedTemplateBlock(source: string, constName: string): string {
+  const lines = source.split('\n');
+  const needle = `const ${constName} = \``;
+  const startIdx = lines.findIndex((l) => l.includes(needle));
+  if (startIdx === -1) {
+    throw new Error(`template block const ${constName} not found`);
+  }
+  let endIdx = -1;
+  for (let i = startIdx; i < lines.length; i++) {
+    const trimmed = lines[i].trimEnd();
+    if (trimmed.endsWith('`;') && !trimmed.endsWith('\\`;')) {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    throw new Error(`template block const ${constName} closing backtick not found`);
+  }
+  const first = lines[startIdx];
+  const backtickAt = first.indexOf('`');
+  const head = first.slice(backtickAt + 1);
+  if (endIdx === startIdx) {
+    return head.replace(/`;\s*$/, '');
+  }
+  const tail = lines[endIdx].replace(/`;\s*$/, '');
+  return [head, ...lines.slice(startIdx + 1, endIdx), tail].join('\n');
+}
+
 function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
   if (process.env.DSH_DISABLE_HARNESS_PLUGIN === '1') return;
   const vendorDir = path.join(rootDir, 'vendor/dsh-harness-community');
@@ -1884,12 +2257,12 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
     extractTemplateBlock(sshSource, 56, sshSource.split('\n').length),
   );
   const tabsBlock = evalTemplate(
-    extractTemplateBlock(patchesSource, 50, 627),
+    extractNamedTemplateBlock(patchesSource, 'BROWSER_TASK_TABS_COMPONENT'),
     { SSH_CLIENT_RUNTIME_COMPONENTS: sshBlock },
   );
-  const groupsBlock = evalTemplate(extractTemplateBlock(patchesSource, 2025, 2677));
-  const hubBlock = evalTemplate(extractTemplateBlock(patchesSource, 3888, 4617));
-  const groupBarBlock = evalTemplate(extractTemplateBlock(patchesSource, 1117, 1627));
+  const groupsBlock = evalTemplate(extractNamedTemplateBlock(patchesSource, 'workspaceGroupsSectionCode'));
+  const hubBlock = evalTemplate(extractNamedTemplateBlock(patchesSource, 'SCHEDULE_GROUP_HUB_COMPONENT'));
+  const groupBarBlock = evalTemplate(extractNamedTemplateBlock(patchesSource, 'groupRoomNativeBarCode'));
 
   // Custom tabs CSS (BROWSER_TAB_CSS_APPEND + SSH_CLIENT_CSS_APPEND) — quoted
   // string-concat consts, evaluated as JS expressions.
@@ -1903,14 +2276,13 @@ function buildHarnessClientPlugin(rootDir: string, nmScopeDir: string): void {
     .trimEnd()
     .replace(/;\s*$/, '');
   const sshCss = evalJsExpression(sshCssExpr);
-  const browserCssExpr = patchesSource
-    .split('\n')
-    .slice(10, 48)
-    .join('\n')
-    .replace(/^const BROWSER_TAB_CSS_APPEND\s*=/, '')
-    .trimEnd()
-    .replace(/\+\s*SSH_CLIENT_CSS_APPEND;\s*$/, '');
-  const browserTabCss = evalJsExpression(browserCssExpr);
+  const browserCssMatch = patchesSource.match(
+    /const BROWSER_TAB_CSS_APPEND\s*=([\s\S]*?)\+\s*SSH_CLIENT_CSS_APPEND;/,
+  );
+  if (!browserCssMatch) {
+    throw new Error('Could not locate BROWSER_TAB_CSS_APPEND in dsh-client-patches.ts');
+  }
+  const browserTabCss = evalJsExpression(browserCssMatch[1].trim());
 
   const workspaceBundle = safeRead(path.join(nmScopeDir, 'dsh-client-ui-workspace/lib/client.js'));
   const conversationBundle = safeRead(path.join(nmScopeDir, 'dsh-client-ui-conversation/lib/client.js'));
