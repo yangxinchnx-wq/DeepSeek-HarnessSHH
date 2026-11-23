@@ -491,8 +491,8 @@ test('20. [Collapsible Group Bar & Zero Ghost Placeholder on Empty Default Works
   assert.ok(harnessClientCode.includes("document.getElementById('dsh-corner-pull-toggle')"));
   assert.ok(harnessClientCode.includes('besideRight - nl >= 420'));
   assert.ok(harnessClientCode.includes("if (sb.style.paddingTop) sb.style.paddingTop = '';"));
-  // Zero-ghost-space empty Default workspace sidebar CSS
-  assert.ok(harnessClientCode.includes('.bhn1Oq_treeBody{flex:0 0 auto!important;min-height:0!important}'));
+  // Zero-ghost-space empty Default workspace sidebar CSS (unified flex column with display:contents wrappers)
+  assert.ok(harnessClientCode.includes('display:contents!important'));
   assert.ok(harnessClientCode.includes('.bhn1Oq_emptyState{display:none!important;height:0!important;margin:0!important;padding:0!important}'));
   // Clean tab close archive, sidebar anchor, and inset cleanup
   assert.ok(harnessClientCode.includes('uw.workspaces.archiveSession(id)'));
@@ -506,6 +506,36 @@ test('20. [Collapsible Group Bar & Zero Ghost Placeholder on Empty Default Works
   assert.ok(wsClientCode.includes('!gStore?.getRoomForSession?.(id)'));
   assert.equal(wsClientCode.includes('this.startSession(wsSnap.items[0]?.workspaceId,{reuseBlank:false})'), false);
 });
+
+test('21. [1-to-1 Bidirectional Sidebar/Top-Tab Sync & Workspace Subfolder Vertical Drag] Syncs group room cancellation in both directions and enables smooth FLIP vertical drag reordering of all workspace subfolders & group rooms', () => {
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  assert.ok(harnessClientCode.includes('removeRoomOptimistic(roomId)'));
+  assert.ok(harnessClientCode.includes('reorderRoomsOptimistic(roomIds)'));
+  assert.ok(harnessClientCode.includes('sidebar-group-close-'));
+  assert.ok(harnessClientCode.includes('globalThis.__dshCloseTab = closeTabFn;'));
+  assert.ok(harnessClientCode.includes('mountSidebarFolderDrag'));
+  assert.ok(harnessClientCode.includes('dsh_workspace_subfolder_order_v1'));
+  assert.ok(harnessClientCode.includes('disableNativeHeaderDrag'));
+  assert.ok(harnessClientCode.includes('animateSiblingFlip'));
+  assert.ok(harnessClientCode.includes('data-dsh-folder-settling'));
+  assert.ok(harnessClientCode.includes('data-dsh-folder-drag-active'));
+  assert.ok(harnessClientCode.includes('animateRoomFlip'));
+});
+
+test('22. [Preset 1 Corner-Slider Left-Docked Nav Sidebar Toggle] Aligns [data-dsh-nav-sidebar-toggle] horizontally to the left of #dsh-corner-pull-toggle in Preset 1 and restores nav docking in other themes', () => {
+  const harnessClientCode = fs.readFileSync(
+    path.join(rootDir, 'node_modules/dsh-harness-community/client.js'),
+    'utf8',
+  );
+  assert.ok(harnessClientCode.includes('data-dsh-nav-toggle-dock="corner-slider"'));
+  assert.ok(harnessClientCode.includes('positionBesideCornerSlider'));
+  assert.ok(harnessClientCode.includes('txt === "更多" || txt === "More"'));
+});
+
+
 
 
 

@@ -734,6 +734,46 @@ export class SuperagentGroupHubStore {
     return room;
   }
 
+  public removeRoom(roomId: string): boolean {
+    const before = this.state.rooms.length;
+    this.state.rooms = this.state.rooms.filter((r) => r.id !== roomId);
+    if (this.state.rooms.length === before) return false;
+    if (this.activeRoomId === roomId) {
+      this.activeRoomId = null;
+    }
+    for (const [sid, rid] of this.sessionRoomMap.entries()) {
+      if (rid === roomId) {
+        this.sessionRoomMap.delete(sid);
+      }
+    }
+    this.saveState();
+    return true;
+  }
+
+  public reorderRooms(roomIds: string[]): GroupRoom[] {
+    if (!Array.isArray(roomIds) || roomIds.length === 0) {
+      return this.listRooms();
+    }
+    const byId = new Map(this.state.rooms.map((r) => [r.id, r]));
+    const next: GroupRoom[] = [];
+    const seen = new Set<string>();
+    for (const id of roomIds) {
+      const room = byId.get(id);
+      if (room && !seen.has(id)) {
+        next.push(room);
+        seen.add(id);
+      }
+    }
+    for (const room of this.state.rooms) {
+      if (!seen.has(room.id)) {
+        next.push(room);
+      }
+    }
+    this.state.rooms = next;
+    this.saveState();
+    return this.listRooms();
+  }
+
   /**
    * Dispatches an outbound group message to all bound external bot connectors (QQ OneBot v11, DingTalk, Feishu, WeCom, Custom).
    */
@@ -1273,11 +1313,33 @@ export async function handleSuperagentGroupHubApiRequest(
     return true;
   }
 
+  // PUT /api/superagent-groups/rooms/reorder
+  if (req.method === 'PUT' && pathname === '/api/superagent-groups/rooms/reorder') {
+    const body = await readJsonBody(req);
+    const roomIds = Array.isArray(body.roomIds)
+      ? body.roomIds.filter((id): id is string => typeof id === 'string')
+      : [];
+    const rooms = groupStore.reorderRooms(roomIds);
+    sendJson(res, 200, { ok: true, rooms });
+    return true;
+  }
+
   // Match /api/superagent-groups/rooms/:roomId or /api/superagent-groups/rooms/:roomId/:action
   const roomMatch = /^\/api\/superagent-groups\/rooms\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
   if (roomMatch) {
     const roomId = decodeURIComponent(roomMatch[1]);
     const action = roomMatch[2] ? decodeURIComponent(roomMatch[2]) : undefined;
+
+    if (req.method === 'DELETE' && !action) {
+      const removed = groupStore.removeRoom(roomId);
+      if (!removed) {
+        sendJson(res, 404, { ok: false, error: 'Room not found' });
+        return true;
+      }
+      const state = groupStore.getState();
+      sendJson(res, 200, { ok: true, rooms: state.rooms, activeRoomId: groupStore.getActiveRoom()?.id ?? null });
+      return true;
+    }
 
     if (req.method === 'PUT' && !action) {
       const body = await readJsonBody(req);

@@ -6,6 +6,7 @@ import {
   computeTabWheelScrollLeft,
   deriveVisibleTabIds,
   resolveSessionSwitchDirection,
+  computeVerticalDragReorder,
 } from './browser-tabs-logic';
 
 test('clampTabDragDx strictly bounds horizontal movement within container', () => {
@@ -251,5 +252,59 @@ test('reconcileStrictSidebarTabs unifies workspace sessions and group rooms 1-to
     's1',
   );
 });
+
+test('computeVerticalDragReorder handles unequal folder heights smoothly without oscillation', () => {
+  const items = [
+    { id: 'ws:default', height: 180 },
+    { id: 'automation', height: 32 },
+    { id: 'groups', height: 70 },
+  ];
+  // Dragging tall Default workspace (180px) DOWN past short automation (32px) triggers after only ~25px!
+  const downSmall = computeVerticalDragReorder({
+    items,
+    draggedId: 'ws:default',
+    listTop: 100,
+    visualTop: 100 + 25,
+    direction: 1,
+    gap: 4,
+    hysteresis: 4,
+  });
+  assert.equal(downSmall.swapped, true);
+  assert.deepEqual(downSmall.order, ['automation', 'ws:default', 'groups']);
+  assert.equal(downSmall.anchorShiftY, 36); // 32 + 4
+
+  // Immediately wiggling 1px UP at the same visual position must NOT oscillate back!
+  const afterDownItems = [
+    { id: 'automation', height: 32 },
+    { id: 'ws:default', height: 180 },
+    { id: 'groups', height: 70 },
+  ];
+  const reverseWiggle = computeVerticalDragReorder({
+    items: afterDownItems,
+    draggedId: 'ws:default',
+    listTop: 100,
+    visualTop: 100 + 24,
+    direction: -1,
+    gap: 4,
+    hysteresis: 4,
+  });
+  assert.equal(reverseWiggle.swapped, false);
+  assert.deepEqual(reverseWiggle.order, ['automation', 'ws:default', 'groups']);
+
+  // Dragging short groups (70px) UP all the way past automation and Default workspace in a fast sweep
+  const upSweep = computeVerticalDragReorder({
+    items,
+    draggedId: 'groups',
+    listTop: 100,
+    visualTop: 140,
+    direction: -1,
+    gap: 4,
+    hysteresis: 4,
+  });
+  assert.equal(upSweep.swapped, true);
+  assert.deepEqual(upSweep.order, ['groups', 'ws:default', 'automation']);
+  assert.equal(upSweep.anchorShiftY, -(180 + 4 + 32 + 4));
+});
+
 
 

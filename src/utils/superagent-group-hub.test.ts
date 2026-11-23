@@ -255,3 +255,30 @@ test('6. all_broadcast consults every enabled room agent and room updates persis
   }
 });
 
+test('7. reorderRooms and removeRoom persist room order and deletions across store reloads', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'group-hub-reorder-remove-'));
+  try {
+    const connectorStore = new SuperagentConnectorStore(tmpDir);
+    const groupStore = new SuperagentGroupHubStore(tmpDir, connectorStore);
+    const initialIds = groupStore.listRooms().map((r) => r.id);
+    assert.equal(initialIds.length, 2);
+
+    const reversed = [...initialIds].reverse();
+    const reordered = groupStore.reorderRooms(reversed);
+    assert.deepEqual(reordered.map((r) => r.id), reversed);
+
+    const reloadedAfterReorder = new SuperagentGroupHubStore(tmpDir, connectorStore);
+    assert.deepEqual(reloadedAfterReorder.listRooms().map((r) => r.id), reversed);
+
+    const removed = reloadedAfterReorder.removeRoom(reversed[0]);
+    assert.equal(removed, true);
+    assert.deepEqual(reloadedAfterReorder.listRooms().map((r) => r.id), [reversed[1]]);
+
+    const reloadedAfterRemove = new SuperagentGroupHubStore(tmpDir, connectorStore);
+    assert.deepEqual(reloadedAfterRemove.listRooms().map((r) => r.id), [reversed[1]]);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+

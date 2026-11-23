@@ -349,4 +349,93 @@ export function reconcileStrictSidebarTabs(params: {
   return nextOrder;
 }
 
+export interface VerticalDragItem {
+  id: string;
+  height: number;
+}
+
+/**
+ * Computes direction-aware, oscillation-free vertical drag reordering across
+ * items of arbitrary unequal heights using analytical layout slot coordinates
+ * (immune to in-flight FLIP CSS transforms).
+ */
+export function computeVerticalDragReorder(params: {
+  items: readonly VerticalDragItem[];
+  draggedId: string;
+  listTop: number;
+  visualTop: number;
+  direction: number;
+  gap?: number;
+  hysteresis?: number;
+}): {
+  order: string[];
+  swapped: boolean;
+  anchorShiftY: number;
+  newIndex: number;
+} {
+  const { items, draggedId, listTop, visualTop, direction, gap = 4, hysteresis = 4 } = params;
+  const curIdx = items.findIndex((item) => item.id === draggedId);
+  if (curIdx === -1 || items.length < 2 || direction === 0) {
+    return { order: items.map((i) => i.id), swapped: false, anchorShiftY: 0, newIndex: curIdx };
+  }
+
+  const work = items.map((i) => ({ id: i.id, height: i.height }));
+  let idx = curIdx;
+  let anchorShiftY = 0;
+  let swapped = false;
+
+  const slotTopOf = (targetIdx: number): number => {
+    let y = listTop;
+    for (let i = 0; i < targetIdx; i++) {
+      y += work[i].height + gap;
+    }
+    return y;
+  };
+
+  const draggedHeight = work[idx].height;
+  const visualBottom = visualTop + draggedHeight;
+
+  if (direction > 0) {
+    while (idx < work.length - 1) {
+      const nextSlotTop = slotTopOf(idx + 1);
+      const nextMid = nextSlotTop + work[idx + 1].height / 2;
+      if (visualBottom > nextMid + hysteresis) {
+        const shift = work[idx + 1].height + gap;
+        const tmp = work[idx];
+        work[idx] = work[idx + 1];
+        work[idx + 1] = tmp;
+        idx += 1;
+        anchorShiftY += shift;
+        swapped = true;
+      } else {
+        break;
+      }
+    }
+  } else if (direction < 0) {
+    while (idx > 0) {
+      const prevSlotTop = slotTopOf(idx - 1);
+      const prevMid = prevSlotTop + work[idx - 1].height / 2;
+      if (visualTop < prevMid - hysteresis) {
+        const shift = -(work[idx - 1].height + gap);
+        const tmp = work[idx];
+        work[idx] = work[idx - 1];
+        work[idx - 1] = tmp;
+        idx -= 1;
+        anchorShiftY += shift;
+        swapped = true;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return {
+    order: work.map((i) => i.id),
+    swapped,
+    anchorShiftY,
+    newIndex: idx,
+  };
+}
+
+
 

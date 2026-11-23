@@ -167,6 +167,14 @@ test('buildLuminexPresetCss includes universal theme-switching, menu icon visibi
       css.includes('.hHd-Xa_logoRow > .hHd-Xa_toggle svg,.hHd-Xa_newSession svg,.hHd-Xa_newSession .hHd-Xa_newSessionContent > svg{width:16px!important;height:16px!important'),
     'Must enforce identical 36px height, alignment, and 16x16 SVG icon sizing for .hHd-Xa_newSession and .hHd-Xa_toggle across all themes and expanded/collapsed states',
   );
+  assert.ok(
+    css.includes('.wSkVaW_body{container-type:inline-size}') &&
+      css.includes('.wSkVaW_body .wSkVaW_scrollBody,.wSkVaW_body .wSkVaW_widthHandle{--dsh-chat-content-width:var(--dsh-chat-user-width,clamp(680px,64cqi,920px))') &&
+      css.includes('@container (max-width: 560px){.uV2eYG_row .uV2eYG_trailing{--dsh-composer-model-text-display:none;--dsh-composer-model-icon-display:block}}') &&
+      css.includes('.pI_x6G_frame[data-animating] .uV2eYG_row{flex-wrap:nowrap}') &&
+      css.includes('.hHd-Xa_root{transition:width var(--ds-transition-duration-slow,0.3s)'),
+    'Must use synchronous CSS container queries (64cqi and <=560px compact toolbar) so toggling sidebars shrinks/expands the center conversation without ResizeObserver bounce or 2-line wrap jump',
+  );
 });
 
 
